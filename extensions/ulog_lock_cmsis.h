@@ -5,7 +5,7 @@
 // Usage:
 //    #include "ulog_lock_cmsis.h"
 //    ...
-//    osMutexId_t mutex_id = osMutexNew(NULL);
+//    osMutexId_t mutex_id = osMutexNew(nullptr);
 //    ulog_lock_cmsis_enable(mutex_id);
 //    ulog_info("CMSIS lock active");
 //
@@ -22,12 +22,12 @@ extern "C" {
  * @brief Enable locking with an existing CMSIS-RTOS2 mutex id.
  * @param mutex_id Handle returned by osMutexNew or equivalent.
  */
-ulog_status ulog_lock_cmsis_enable(osMutexId_t mutex_id);
+[[nodiscard]] ulog_status ulog_lock_cmsis_enable(osMutexId_t mutex_id);
 
 /**
  * @brief Disable logging lock (clears lock function). Keeps mutex.
  */
-ulog_status ulog_lock_cmsis_disable(void);
+[[nodiscard]] ulog_status ulog_lock_cmsis_disable();
 
 #ifdef __cplusplus
 }

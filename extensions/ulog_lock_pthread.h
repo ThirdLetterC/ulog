@@ -6,7 +6,7 @@
 //    #include "ulog_lock_pthread.h"
 //    ...
 //    pthread_mutex_t m;
-//    pthread_mutex_init(&m, NULL);
+//    pthread_mutex_init(&m, nullptr);
 //    ulog_lock_pthread_enable(&m);
 //    ulog_info("pthread lock active");
 //
@@ -23,15 +23,15 @@ extern "C" {
  * @brief Enable locking with an existing, already initialized pthread mutex.
  * @param mtx Pointer to initialized mutex.
  * @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if mtx is
- * NULL.
+ * nullptr.
  */
-ulog_status ulog_lock_pthread_enable(pthread_mutex_t *mtx);
+[[nodiscard]] ulog_status ulog_lock_pthread_enable(pthread_mutex_t *mtx);
 
 /**
  * @brief Disable logging lock (clears lock function). Does not destroy mutex.
  * @return ULOG_STATUS_OK always.
  */
-ulog_status ulog_lock_pthread_disable(void);
+[[nodiscard]] ulog_status ulog_lock_pthread_disable();
 
 #ifdef __cplusplus
 }

@@ -32,13 +32,13 @@ extern "C" {
    Core: Log Level Enum Compatibility
 ============================================================================ */
 
-// Map old log level enum to new ones (keep macro form to avoid enum mismatches)
-#define LOG_TRACE ULOG_LEVEL_TRACE
-#define LOG_DEBUG ULOG_LEVEL_DEBUG
-#define LOG_INFO  ULOG_LEVEL_INFO
-#define LOG_WARN  ULOG_LEVEL_WARN
-#define LOG_ERROR ULOG_LEVEL_ERROR
-#define LOG_FATAL ULOG_LEVEL_FATAL
+// Map old log level enum to new ones
+[[maybe_unused]] static constexpr ulog_level LOG_TRACE = ULOG_LEVEL_TRACE;
+[[maybe_unused]] static constexpr ulog_level LOG_DEBUG = ULOG_LEVEL_DEBUG;
+[[maybe_unused]] static constexpr ulog_level LOG_INFO  = ULOG_LEVEL_INFO;
+[[maybe_unused]] static constexpr ulog_level LOG_WARN  = ULOG_LEVEL_WARN;
+[[maybe_unused]] static constexpr ulog_level LOG_ERROR = ULOG_LEVEL_ERROR;
+[[maybe_unused]] static constexpr ulog_level LOG_FATAL = ULOG_LEVEL_FATAL;
 
 /* ============================================================================
    Core: Basic Logging Macros
@@ -65,8 +65,8 @@ typedef ulog_output_handler_fn ulog_LogFn;
 
 /// @brief Returns the string representation of the level (compatible)
 static inline const char *ulog_get_level_string(int level) {
-    const char *name = ulog_level_to_string((ulog_level)level);
-    if (name == NULL) {
+    auto name = ulog_level_to_string((ulog_level)level);
+    if (name == nullptr) {
         name = "?";
     }
 
@@ -109,13 +109,13 @@ static inline void ulog_set_quiet(bool enable) {
 typedef void (*ulog_LockFn)(bool lock, void *lock_arg);
 
 // Internal static storage for lock wrapper
-static ulog_LockFn _ulog_compat_stored_lock_fn = NULL;
-static void *_ulog_compat_stored_lock_arg = NULL;
+static ulog_LockFn _ulog_compat_stored_lock_fn = nullptr;
+static void *_ulog_compat_stored_lock_arg = nullptr;
 
 // Internal wrapper function to adapt old void return to new ulog_status return
 static inline ulog_status _ulog_compat_lock_wrapper(bool lock, void *arg) {
     (void)arg;  // Use stored args instead
-    if (_ulog_compat_stored_lock_fn != NULL) {
+    if (_ulog_compat_stored_lock_fn != nullptr) {
         _ulog_compat_stored_lock_fn(lock, _ulog_compat_stored_lock_arg);
     }
     return ULOG_STATUS_OK;
@@ -125,16 +125,16 @@ static inline ulog_status _ulog_compat_lock_wrapper(bool lock, void *arg) {
 /// Note: This uses static storage and may not work with multiple different locks
 /// For production use with multiple locks, consider a more sophisticated approach
 static inline void ulog_set_lock(ulog_LockFn function, void *lock_arg) {
-    if (function == NULL) {
-        _ulog_compat_stored_lock_fn = NULL;
-        _ulog_compat_stored_lock_arg = NULL;
-        ulog_lock_set_fn(NULL, NULL);
+    if (function == nullptr) {
+        _ulog_compat_stored_lock_fn = nullptr;
+        _ulog_compat_stored_lock_arg = nullptr;
+        (void)ulog_lock_set_fn(nullptr, nullptr);
         return;
     }
 
     _ulog_compat_stored_lock_fn = function;
     _ulog_compat_stored_lock_arg = lock_arg;
-    ulog_lock_set_fn(_ulog_compat_lock_wrapper, NULL);
+    (void)ulog_lock_set_fn(_ulog_compat_lock_wrapper, nullptr);
 }
 
 /* ============================================================================
@@ -187,7 +187,7 @@ static inline void ulog_set_prefix_fn(ulog_PrefixFn function) {
     // The signatures are compatible, just cast
     (void)ulog_prefix_set_fn((ulog_prefix_fn)function);
 #if defined(ULOG_BUILD_DYNAMIC_CONFIG) && ULOG_BUILD_DYNAMIC_CONFIG == 1
-    (void)ulog_prefix_config(function != NULL);
+    (void)ulog_prefix_config(function != nullptr);
 #endif
 }
 
@@ -203,14 +203,14 @@ static inline void ulog_set_prefix_fn(ulog_PrefixFn function) {
 /// @brief Adds a callback (returns int for compatibility)
 /// @return 0 if success, -1 if failed
 static inline int ulog_add_callback(ulog_LogFn function, void *arg, int level) {
-    ulog_output_id id = ulog_output_add(function, arg, (ulog_level)level);
+    auto id = ulog_output_add(function, arg, (ulog_level)level);
     return (id == ULOG_OUTPUT_INVALID) ? -1 : 0;
 }
 
 /// @brief Add file callback (returns int for compatibility)
 /// @return 0 if success, -1 if failed
 static inline int ulog_add_fp(FILE *fp, int level) {
-    ulog_output_id id = ulog_output_add_file(fp, (ulog_level)level);
+    auto id = ulog_output_add_file(fp, (ulog_level)level);
     return (id == ULOG_OUTPUT_INVALID) ? -1 : 0;
 }
 
@@ -224,7 +224,7 @@ static inline int ulog_add_fp(FILE *fp, int level) {
     (defined(ULOG_BUILD_DYNAMIC_CONFIG) && ULOG_BUILD_DYNAMIC_CONFIG == 1)
 
 // Topic macros using old naming convention
-#define TOPIC_NOT_FOUND ULOG_TOPIC_ID_INVALID
+[[maybe_unused]] static constexpr ulog_topic_id TOPIC_NOT_FOUND = ULOG_TOPIC_ID_INVALID;
 
 #define logt_trace(TOPIC_NAME, ...) ulog_topic_trace(TOPIC_NAME, __VA_ARGS__)
 #define logt_debug(TOPIC_NAME, ...) ulog_topic_debug(TOPIC_NAME, __VA_ARGS__)
@@ -238,17 +238,17 @@ static inline int ulog_add_fp(FILE *fp, int level) {
 /// @param enable true to enable topic, false to disable
 /// @return Topic ID if success, -1 if failed
 static inline int ulog_add_topic(const char *topic_name, bool enable) {
-    if (topic_name == NULL || topic_name[0] == '\0') {
+    if (topic_name == nullptr || topic_name[0] == '\0') {
         return -1;
     }
 
-    ulog_topic_id id = ulog_topic_add(topic_name, ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
+    auto id = ulog_topic_add(topic_name, ULOG_OUTPUT_ALL, ULOG_LEVEL_TRACE);
     if (id == ULOG_TOPIC_ID_INVALID) {
         return -1;
     }
 
     if (!enable) {
-        ulog_status status = ulog_topic_level_set(topic_name, ULOG_LEVEL_FATAL);
+        auto status = ulog_topic_level_set(topic_name, ULOG_LEVEL_FATAL);
         if (status != ULOG_STATUS_OK) {
             return -1;
         }
@@ -259,7 +259,7 @@ static inline int ulog_add_topic(const char *topic_name, bool enable) {
 /// @brief Sets the debug level of a given topic (returns int for compatibility)
 /// @return 0 if success, -1 if failed
 static inline int ulog_set_topic_level(const char *topic_name, int level) {
-    ulog_status status = ulog_topic_level_set(topic_name, (ulog_level)level);
+    auto status = ulog_topic_level_set(topic_name, (ulog_level)level);
     return (status == ULOG_STATUS_OK) ? 0 : -1;
 }
 
@@ -272,14 +272,14 @@ static inline int ulog_get_topic_id(const char *topic_name) {
 /// @brief Enables the topic (sets level to TRACE)
 /// @return 0 if success, -1 if failed
 static inline int ulog_enable_topic(const char *topic_name) {
-    ulog_status status = ulog_topic_level_set(topic_name, ULOG_LEVEL_TRACE);
+    auto status = ulog_topic_level_set(topic_name, ULOG_LEVEL_TRACE);
     return (status == ULOG_STATUS_OK) ? 0 : -1;
 }
 
 /// @brief Disables the topic (sets level to highest severity)
 /// @return 0 if success, -1 if failed
 static inline int ulog_disable_topic(const char *topic_name) {
-    ulog_status status = ulog_topic_level_set(topic_name, ULOG_LEVEL_FATAL);
+    auto status = ulog_topic_level_set(topic_name, ULOG_LEVEL_FATAL);
     return (status == ULOG_STATUS_OK) ? 0 : -1;
 }
 
@@ -287,7 +287,7 @@ static inline int ulog_disable_topic(const char *topic_name) {
 /// Note: In v7.x, there's no direct API for this. This is a simplified version
 /// that only works if you track your topics externally
 /// @return 0 (always succeeds in this simple implementation)
-static inline int ulog_enable_all_topics(void) {
+static inline int ulog_enable_all_topics() {
     // v7.x doesn't provide an iterate-all-topics API
     // Users must track topics if they need this functionality
     // This is a limitation of the compatibility layer
@@ -297,7 +297,7 @@ static inline int ulog_enable_all_topics(void) {
 /// @brief Disables all topics
 /// Note: Same limitation as ulog_enable_all_topics
 /// @return 0 (always succeeds in this simple implementation)
-static inline int ulog_disable_all_topics(void) {
+static inline int ulog_disable_all_topics() {
     // Same limitation as enable_all_topics
     return 0;  // Return success but note this is incomplete
 }

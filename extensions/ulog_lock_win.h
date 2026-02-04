@@ -23,12 +23,12 @@ extern "C" {
  * @param cs Pointer to initialized critical section.
  * @return ULOG_STATUS_OK or ULOG_STATUS_INVALID_ARGUMENT.
  */
-ulog_status ulog_lock_win_enable(CRITICAL_SECTION *cs);
+[[nodiscard]] ulog_status ulog_lock_win_enable(CRITICAL_SECTION *cs);
 
 /**
  * @brief Disable logging lock (clears lock function). Does not delete section.
  */
-ulog_status ulog_lock_win_disable(void);
+[[nodiscard]] ulog_status ulog_lock_win_disable();
 
 #ifdef __cplusplus
 }

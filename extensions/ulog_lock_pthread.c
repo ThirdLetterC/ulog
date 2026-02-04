@@ -15,12 +15,12 @@
  * signature.
  */
 static ulog_status pthread_lock_fn(bool lock, void *arg) {
-    if (arg == NULL) {
+    if (arg == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
-    pthread_mutex_t *mtx = (pthread_mutex_t *)arg;
-    int rc               = -1;
+    auto *mtx = (pthread_mutex_t *)arg;
+    auto rc   = -1;
 
     if (lock) {
         rc = pthread_mutex_lock(mtx);
@@ -38,16 +38,14 @@ static ulog_status pthread_lock_fn(bool lock, void *arg) {
  * @copydoc ulog_lock_pthread_enable
  */
 ulog_status ulog_lock_pthread_enable(pthread_mutex_t *mtx) {
-    if (mtx == NULL) {
+    if (mtx == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
-    ulog_lock_set_fn(pthread_lock_fn, mtx);
-    return ULOG_STATUS_OK;
+    return ulog_lock_set_fn(pthread_lock_fn, mtx);
 }
 
 /** @copydoc ulog_lock_pthread_disable */
-ulog_status ulog_lock_pthread_disable(void) {
-    ulog_lock_set_fn(NULL, NULL);
-    return ULOG_STATUS_OK;
+ulog_status ulog_lock_pthread_disable() {
+    return ulog_lock_set_fn(nullptr, nullptr);
 }

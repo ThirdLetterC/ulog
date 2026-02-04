@@ -19,9 +19,11 @@
 #pragma once
 
 #include <stdarg.h>
-#include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+
+struct tm;
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,12 +61,12 @@ typedef enum ulog_level_enum {
 } ulog_level;
 
 /// @brief Default log levels in ascending order of severity
-#define ULOG_LEVEL_TRACE (ulog_level)0  ///< For tracing execution
-#define ULOG_LEVEL_DEBUG (ulog_level)1  ///< Debug information for developers
-#define ULOG_LEVEL_INFO (ulog_level)2   ///< General information messages
-#define ULOG_LEVEL_WARN (ulog_level)3   ///< For potential issues
-#define ULOG_LEVEL_ERROR (ulog_level)4  ///< For failures
-#define ULOG_LEVEL_FATAL (ulog_level)5  ///< May terminate program
+[[maybe_unused]] static constexpr ulog_level ULOG_LEVEL_TRACE = ULOG_LEVEL_0;  ///< For tracing execution
+[[maybe_unused]] static constexpr ulog_level ULOG_LEVEL_DEBUG = ULOG_LEVEL_1;  ///< Debug information for developers
+[[maybe_unused]] static constexpr ulog_level ULOG_LEVEL_INFO  = ULOG_LEVEL_2;  ///< General information messages
+[[maybe_unused]] static constexpr ulog_level ULOG_LEVEL_WARN  = ULOG_LEVEL_3;  ///< For potential issues
+[[maybe_unused]] static constexpr ulog_level ULOG_LEVEL_ERROR = ULOG_LEVEL_4;  ///< For failures
+[[maybe_unused]] static constexpr ulog_level ULOG_LEVEL_FATAL = ULOG_LEVEL_5;  ///< May terminate program
 
 typedef const char *ulog_level_names[ULOG_LEVEL_TOTAL];
 
@@ -81,11 +83,11 @@ const char *ulog_level_to_string(ulog_level level);
 /// @brief  Set custom log levels
 /// @param new_levels
 /// @return ulog_status
-ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels);
+[[nodiscard]] ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels);
 
 /// @brief Set default log levels (TRACE, DEBUG, INFO, WARN, ERROR, FATAL)
 /// @return ulog_status
-ulog_status ulog_level_reset_levels(void);
+[[nodiscard]] ulog_status ulog_level_reset_levels();
 
 /* ============================================================================
    Feature: Topics (1/2)
@@ -110,7 +112,7 @@ typedef struct ulog_event ulog_event;
 /// @param out_size Size of the output buffer
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
 /// parameters
-ulog_status ulog_event_to_cstr(ulog_event *ev, char *out, size_t out_size);
+[[nodiscard]] ulog_status ulog_event_to_cstr(ulog_event *ev, char *out, size_t out_size);
 
 /// @brief Extract the message from an event into a buffer
 /// @param ev Event to extract message from
@@ -118,32 +120,32 @@ ulog_status ulog_event_to_cstr(ulog_event *ev, char *out, size_t out_size);
 /// @param buffer_size Size of the output buffer
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
 /// parameters
-ulog_status ulog_event_get_message(ulog_event *ev, char *buffer,
-                                   size_t buffer_size);
+[[nodiscard]] ulog_status ulog_event_get_message(ulog_event *ev, char *buffer,
+                                                 size_t buffer_size);
 
 /// @brief Get the topic ID from an event
 /// @param ev Event to get topic from
-/// @return Topic ID, or ULOG_TOPIC_ID_INVALID if event is NULL
+/// @return Topic ID, or ULOG_TOPIC_ID_INVALID if event is nullptr
 ulog_topic_id ulog_event_get_topic(ulog_event *ev);
 
 /// @brief Get the line number from an event
 /// @param ev Event to get line number from
-/// @return Line number, or -1 if event is NULL
+/// @return Line number, or -1 if event is nullptr
 int ulog_event_get_line(ulog_event *ev);
 
 /// @brief Get the file name from an event
 /// @param ev Event to get file name from
-/// @return File name string, or NULL if event is NULL
+/// @return File name string, or nullptr if event is nullptr
 const char *ulog_event_get_file(ulog_event *ev);
 
 /// @brief Get the log level from an event
 /// @param ev Event to get log level from
-/// @return Log level, or ULOG_LEVEL_TRACE if event is NULL
+/// @return Log level, or ULOG_LEVEL_TRACE if event is nullptr
 ulog_level ulog_event_get_level(ulog_event *ev);
 
 /// @brief Get the timestamp from an event (requires ULOG_BUILD_TIME=1)
 /// @param ev Event to get timestamp from
-/// @return Pointer to struct tm with time information, or NULL if event is NULL
+/// @return Pointer to struct tm with time information, or nullptr if event is nullptr
 ///         or time feature disabled
 struct tm *ulog_event_get_time(ulog_event *ev);
 
@@ -157,11 +159,10 @@ struct tm *ulog_event_get_time(ulog_event *ev);
 typedef ulog_status (*ulog_lock_fn)(bool lock, void *lock_arg);
 
 /// @brief Sets the thread synchronization lock function
-/// @param function Lock function to use, or NULL to disable locking
+/// @param function Lock function to use, or nullptr to disable locking
 /// @param lock_arg User argument passed to the lock function
-/// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if function
-/// is NULL
-ulog_status ulog_lock_set_fn(ulog_lock_fn function, void *lock_arg);
+/// @return ULOG_STATUS_OK on success
+[[nodiscard]] ulog_status ulog_lock_set_fn(ulog_lock_fn function, void *lock_arg);
 
 /* ============================================================================
    Feature: Dynamic Config
@@ -172,28 +173,28 @@ ulog_status ulog_lock_set_fn(ulog_lock_fn function, void *lock_arg);
 /// @param enabled True to enable colors, false to disable
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
 ///         acquired
-ulog_status ulog_color_config(bool enabled);
+[[nodiscard]] ulog_status ulog_color_config(bool enabled);
 
 /// @brief Enable or disable custom prefix (requires
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param enabled True to enable prefix, false to disable
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
 ///         acquired
-ulog_status ulog_prefix_config(bool enabled);
+[[nodiscard]] ulog_status ulog_prefix_config(bool enabled);
 
 /// @brief Enable or disable source location in logs (requires
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param enabled True to show file:line, false to hide
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
 ///         acquired
-ulog_status ulog_source_location_config(bool enabled);
+[[nodiscard]] ulog_status ulog_source_location_config(bool enabled);
 
 /// @brief Enable or disable timestamps in logs (requires
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param enabled True to show timestamps, false to hide
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
 ///         acquired
-ulog_status ulog_time_config(bool enabled);
+[[nodiscard]] ulog_status ulog_time_config(bool enabled);
 
 /// @brief Log level configuration styles
 typedef enum {
@@ -205,14 +206,14 @@ typedef enum {
 /// @param style Level configuration style
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
 ///         acquired
-ulog_status ulog_level_config(ulog_level_config_style style);
+[[nodiscard]] ulog_status ulog_level_config(ulog_level_config_style style);
 
 /// @brief Enable or disable topic support (requires
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param enabled True to enable topics, false to disable
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
 ///         acquired
-ulog_status ulog_topic_config(bool enabled);
+[[nodiscard]] ulog_status ulog_topic_config(bool enabled);
 
 /* ============================================================================
    Feature: Prefix
@@ -228,10 +229,10 @@ typedef void (*ulog_prefix_fn)(ulog_event *ev, char *prefix,
 
 /// @brief Sets the custom prefix generation function (requires
 ///        ULOG_BUILD_PREFIX_SIZE>0 or ULOG_BUILD_DYNAMIC_CONFIG=1)
-/// @param function Handler function to generate prefix, or NULL to disable
+/// @param function Handler function to generate prefix, or nullptr to disable
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
-///         acquired, ULOG_STATUS_INVALID_ARGUMENT if function is NULL
-ulog_status ulog_prefix_set_fn(ulog_prefix_fn function);
+///         acquired, ULOG_STATUS_INVALID_ARGUMENT if function is nullptr
+[[nodiscard]] ulog_status ulog_prefix_set_fn(ulog_prefix_fn function);
 
 /* ============================================================================
    Feature: Output
@@ -255,13 +256,13 @@ typedef void (*ulog_output_handler_fn)(ulog_event *ev, void *arg);
 /// @param level Minimum log level for this output
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
 ///         parameters, ULOG_STATUS_NOT_FOUND if output not found
-ulog_status ulog_output_level_set(ulog_output_id output, ulog_level level);
+[[nodiscard]] ulog_status ulog_output_level_set(ulog_output_id output, ulog_level level);
 
 /// @brief Sets the minimum log level for all outputs
 /// @param level Minimum log level for all outputs
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
 /// level
-ulog_status ulog_output_level_set_all(ulog_level level);
+[[nodiscard]] ulog_status ulog_output_level_set_all(ulog_level level);
 
 /// @brief Adds a custom output handler (requires ULOG_BUILD_EXTRA_OUTPUTS>0
 /// or ULOG_BUILD_DYNAMIC_CONFIG=1)
@@ -269,22 +270,22 @@ ulog_status ulog_output_level_set_all(ulog_level level);
 /// @param arg User argument passed to the handler function
 /// @param level Minimum log level for this output
 /// @return Output handle on success, ULOG_OUTPUT_INVALID on error
-ulog_output_id ulog_output_add(ulog_output_handler_fn handler, void *arg,
-                               ulog_level level);
+[[nodiscard]] ulog_output_id ulog_output_add(ulog_output_handler_fn handler, void *arg,
+                                             ulog_level level);
 
 /// @brief Adds a file output (requires ULOG_BUILD_EXTRA_OUTPUTS>0 or
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param file File pointer to write logs to (must remain valid)
 /// @param level Minimum log level for this file output
 /// @return Output handle on success, ULOG_OUTPUT_INVALID on error
-ulog_output_id ulog_output_add_file(FILE *file, ulog_level level);
+[[nodiscard]] ulog_output_id ulog_output_add_file(FILE *file, ulog_level level);
 
 /// @brief Removes an output from the logging system (requires
 /// ULOG_BUILD_EXTRA_OUTPUTS>0 or ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param output Output handle to remove
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
 ///         handle, ULOG_STATUS_NOT_FOUND if output not found
-ulog_status ulog_output_remove(ulog_output_id output);
+[[nodiscard]] ulog_status ulog_output_remove(ulog_output_id output);
 
 /* ============================================================================
    Feature: Topics (2/2)
@@ -350,31 +351,31 @@ ulog_status ulog_output_remove(ulog_output_id output);
 
 /// @brief Adds a topic  (requires ULOG_BUILD_TOPICS!=0 or
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
-/// @param topic_name Topic name string (empty or NULL names are invalid)
+/// @param topic_name Topic name string (empty or nullptr names are invalid)
 /// @param output Output handle to associate with this topic (ULOG_OUTPUT_ALL)
 /// @param level Minimum log level for this topic
 /// @return Topic ID on success, ULOG_TOPIC_ID_INVALID on failure
-ulog_topic_id ulog_topic_add(const char *topic_name, ulog_output_id output,
-                             ulog_level level);
+[[nodiscard]] ulog_topic_id ulog_topic_add(const char *topic_name, ulog_output_id output,
+                                           ulog_level level);
 
 /// @brief Removes a topic  (requires ULOG_BUILD_TOPICS!=0 or
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
-/// @param topic_name Topic name string (empty or NULL names are invalid)
+/// @param topic_name Topic name string (empty or nullptr names are invalid)
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_NOT_FOUND if topic not found
-ulog_status ulog_topic_remove(const char *topic_name);
+[[nodiscard]] ulog_status ulog_topic_remove(const char *topic_name);
 
 /// @brief Sets the minimum log level for a topic  (requires
 /// ULOG_BUILD_TOPICS!=0 or ULOG_BUILD_DYNAMIC_CONFIG=1)
-/// @param topic_name Topic name string (empty or NULL names are invalid)
+/// @param topic_name Topic name string (empty or nullptr names are invalid)
 /// @param level Minimum log level for this topic
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_NOT_FOUND if topic not found
-ulog_status ulog_topic_level_set(const char *topic_name, ulog_level level);
+[[nodiscard]] ulog_status ulog_topic_level_set(const char *topic_name, ulog_level level);
 
 /// @brief Gets the ID of a topic by name  (requires ULOG_BUILD_TOPICS!=0 or
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
-/// @param topic_name Topic name string (empty or NULL names are invalid)
+/// @param topic_name Topic name string (empty or nullptr names are invalid)
 /// @return Topic ID on success, ULOG_TOPIC_ID_INVALID if not found
-ulog_topic_id ulog_topic_get_id(const char *topic_name);
+[[nodiscard]] ulog_topic_id ulog_topic_get_id(const char *topic_name);
 
 /* ============================================================================
    Core: Log
@@ -387,38 +388,38 @@ ulog_topic_id ulog_topic_get_id(const char *topic_name);
 /// and `ulog_fatal`.
 /// @param level Log level for this message
 /// @param ... Format arguments for the message
-#define ulog(LEVEL,...) ulog_log(LEVEL, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog(LEVEL,...) ulog_log(LEVEL, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 /// @brief Log a TRACE level message
 /// @param ... Format string and arguments (printf-style)
-#define ulog_trace(...) ulog_log(ULOG_LEVEL_TRACE, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog_trace(...) ulog_log(ULOG_LEVEL_TRACE, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 /// @brief Log a DEBUG level message
 /// @param ... Format string and arguments (printf-style)
-#define ulog_debug(...) ulog_log(ULOG_LEVEL_DEBUG, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog_debug(...) ulog_log(ULOG_LEVEL_DEBUG, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 /// @brief Log an INFO level message
 /// @param ... Format string and arguments (printf-style)
-#define ulog_info(...) ulog_log(ULOG_LEVEL_INFO, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog_info(...) ulog_log(ULOG_LEVEL_INFO, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 /// @brief Log a WARN level message
 /// @param ... Format string and arguments (printf-style)
-#define ulog_warn(...) ulog_log(ULOG_LEVEL_WARN, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog_warn(...) ulog_log(ULOG_LEVEL_WARN, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 /// @brief Log an ERROR level message
 /// @param ... Format string and arguments (printf-style)
-#define ulog_error(...) ulog_log(ULOG_LEVEL_ERROR, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog_error(...) ulog_log(ULOG_LEVEL_ERROR, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 /// @brief Log a FATAL level message
 /// @param ... Format string and arguments (printf-style)
-#define ulog_fatal(...) ulog_log(ULOG_LEVEL_FATAL, __FILE__, __LINE__, NULL, __VA_ARGS__)
+#define ulog_fatal(...) ulog_log(ULOG_LEVEL_FATAL, __FILE__, __LINE__, nullptr, __VA_ARGS__)
 
 
 /// @brief Main logging function - typically called through macros
 /// @param level Log level for this message
 /// @param file Source file name (usually __FILE__)
 /// @param line Source line number (usually __LINE__)
-/// @param topic Topic name string, or NULL for no topic
+/// @param topic Topic name string, or nullptr for no topic
 /// @param message Printf-style format string
 /// @param ... Format arguments for the message
 void ulog_log(ulog_level level, const char *file,
@@ -426,7 +427,7 @@ void ulog_log(ulog_level level, const char *file,
               
 
 /// @brief Clean up all topic, outputs and other dynamic resources
-ulog_status ulog_cleanup(void);
+[[nodiscard]] ulog_status ulog_cleanup();
 
 /* ============================================================================
    Optional Feature: Disable
@@ -446,7 +447,7 @@ ulog_status ulog_cleanup(void);
 #endif
 
 // clang-format off
-ULOG_INLINE ulog_status ulog_cleanup(void) 
+ULOG_INLINE ulog_status ulog_cleanup() 
     { return ULOG_STATUS_DISABLED; }
     
 ULOG_INLINE ulog_status ulog_color_config(bool enabled) 
@@ -465,7 +466,7 @@ ULOG_INLINE ulog_status ulog_event_get_message(ulog_event *ev, char *buffer, siz
     { (void)ev; (void)buffer; (void)buffer_size; return ULOG_STATUS_DISABLED; }
     
 ULOG_INLINE struct tm* ulog_event_get_time(ulog_event *ev) 
-    { (void)ev; return NULL; }
+    { (void)ev; return nullptr; }
     
 ULOG_INLINE ulog_topic_id ulog_event_get_topic(ulog_event *ev) 
     { (void)ev; return ULOG_TOPIC_ID_INVALID; }
@@ -476,7 +477,7 @@ ULOG_INLINE ulog_status ulog_event_to_cstr(ulog_event *ev, char *out, size_t out
 ULOG_INLINE ulog_status ulog_level_config(ulog_level_config_style style) 
     { (void)style; return ULOG_STATUS_DISABLED; }
     
-ULOG_INLINE ulog_status ulog_level_reset_levels(void) 
+ULOG_INLINE ulog_status ulog_level_reset_levels() 
     { return ULOG_STATUS_DISABLED; }
     
 ULOG_INLINE ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels) 

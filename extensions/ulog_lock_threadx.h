@@ -24,12 +24,12 @@ extern "C" {
  * @param mtx Pointer to initialized TX_MUTEX.
  * @return ULOG_STATUS_OK / ULOG_STATUS_INVALID_ARGUMENT.
  */
-ulog_status ulog_lock_threadx_enable(TX_MUTEX *mtx);
+[[nodiscard]] ulog_status ulog_lock_threadx_enable(TX_MUTEX *mtx);
 
 /**
  * @brief Disable logging lock (clears lock function). Does not delete mutex.
  */
-ulog_status ulog_lock_threadx_disable(void);
+[[nodiscard]] ulog_status ulog_lock_threadx_disable();
 
 #ifdef __cplusplus
 }

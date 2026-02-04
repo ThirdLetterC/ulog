@@ -9,11 +9,11 @@
 
 /** @brief Internal FreeRTOS mutex adapter. */
 static ulog_status freertos_lock_fn(bool lock, void *arg) {
-    SemaphoreHandle_t m = (SemaphoreHandle_t)arg;
-    if (m == NULL) {
+    auto m = (SemaphoreHandle_t)arg;
+    if (m == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    BaseType_t ok = pdFALSE;
+    auto ok = pdFALSE;
     if (lock) {
         ok = xSemaphoreTake(m, portMAX_DELAY);
     } else {
@@ -27,15 +27,13 @@ static ulog_status freertos_lock_fn(bool lock, void *arg) {
 
 /** @copydoc ulog_lock_freertos_enable */
 ulog_status ulog_lock_freertos_enable(SemaphoreHandle_t mutex) {
-    if (mutex == NULL) {
+    if (mutex == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    ulog_lock_set_fn(freertos_lock_fn, (void *)mutex);
-    return ULOG_STATUS_OK;
+    return ulog_lock_set_fn(freertos_lock_fn, (void *)mutex);
 }
 
 /** @copydoc ulog_lock_freertos_disable */
-ulog_status ulog_lock_freertos_disable(void) {
-    ulog_lock_set_fn(NULL, NULL);
-    return ULOG_STATUS_OK;
+ulog_status ulog_lock_freertos_disable() {
+    return ulog_lock_set_fn(nullptr, nullptr);
 }

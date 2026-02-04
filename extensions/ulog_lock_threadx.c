@@ -5,11 +5,11 @@
 
 /** @brief Internal ThreadX mutex adapter. */
 static ulog_status threadx_lock_fn(bool lock, void *arg) {
-    if (arg == NULL) {
+    if (arg == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    TX_MUTEX *m = (TX_MUTEX *)arg;
-    UINT rc     = TX_SUCCESS;
+    auto *m = (TX_MUTEX *)arg;
+    auto rc = TX_SUCCESS;
     if (lock) {
         rc = tx_mutex_get(m, TX_WAIT_FOREVER);
     } else {
@@ -23,15 +23,13 @@ static ulog_status threadx_lock_fn(bool lock, void *arg) {
 
 /** @copydoc ulog_lock_threadx_enable */
 ulog_status ulog_lock_threadx_enable(TX_MUTEX *mtx) {
-    if (mtx == NULL) {
+    if (mtx == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    ulog_lock_set_fn(threadx_lock_fn, mtx);
-    return ULOG_STATUS_OK;
+    return ulog_lock_set_fn(threadx_lock_fn, mtx);
 }
 
 /** @copydoc ulog_lock_threadx_disable */
-ulog_status ulog_lock_threadx_disable(void) {
-    ulog_lock_set_fn(NULL, NULL);
-    return ULOG_STATUS_OK;
+ulog_status ulog_lock_threadx_disable() {
+    return ulog_lock_set_fn(nullptr, nullptr);
 }

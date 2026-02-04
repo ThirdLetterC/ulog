@@ -25,12 +25,12 @@ extern "C" {
  * @param mutex Valid recursive or normal mutex handle.
  * @return ULOG_STATUS_OK or ULOG_STATUS_INVALID_ARGUMENT.
  */
-ulog_status ulog_lock_freertos_enable(SemaphoreHandle_t mutex);
+[[nodiscard]] ulog_status ulog_lock_freertos_enable(SemaphoreHandle_t mutex);
 
 /**
  * @brief Disable logging lock (clears lock function). Keeps mutex allocated.
  */
-ulog_status ulog_lock_freertos_disable(void);
+[[nodiscard]] ulog_status ulog_lock_freertos_disable();
 
 #ifdef __cplusplus
 }

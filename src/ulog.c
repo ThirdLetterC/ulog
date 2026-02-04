@@ -208,7 +208,7 @@
 
 // Check if the string is empty or not provided
 static inline bool is_str_empty(const char *str) {
-    return (str == NULL) || (str[0] == '\0');
+    return (str == nullptr) || (str[0] == '\0');
 }
 
 /* ============================================================================
@@ -225,7 +225,7 @@ static inline bool is_str_empty(const char *str) {
     warn_non_enabled_full(__func__, feature, __FILE__, __LINE__)
 
 #define warn_non_enabled_full(func, feature, file, line)                       \
-    ulog_log(ULOG_LEVEL_WARN, file, line, NULL,                                \
+    ulog_log(ULOG_LEVEL_WARN, file, line, nullptr,                                \
              "'%s' called with %s disabled", func, feature)
 
 #endif  // ULOG_HAS_WARN_NOT_ENABLED
@@ -258,16 +258,16 @@ typedef struct {
 static void print_to_target_valist(print_target *tgt, const char *format,
                                    va_list args) {
     if (tgt->type == PRINT_TARGET_BUFFER) {
-        print_buffer *buf = &tgt->dsc.buffer;
+        auto *buf = &tgt->dsc.buffer;
 
         if (buf->curr_pos >= buf->size) {
             return;  // No space available
         }
 
-        size_t remaining = buf->size - buf->curr_pos;
-        char *write_pos  = buf->data + buf->curr_pos;
+        auto remaining = buf->size - buf->curr_pos;
+        auto *write_pos  = buf->data + buf->curr_pos;
 
-        int written = vsnprintf(write_pos, remaining, format, args);
+        auto written = vsnprintf(write_pos, remaining, format, args);
         if (written < 0) {
             return;  // Encoding error
         }
@@ -324,15 +324,15 @@ struct ulog_event {
 
 ulog_status ulog_event_get_message(ulog_event *ev, char *buffer,
                                    size_t buffer_size) {
-    if (ev == NULL || buffer == NULL || buffer_size == 0) {
+    if (ev == nullptr || buffer == nullptr || buffer_size == 0) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
-    print_target tgt = {.type       = PRINT_TARGET_BUFFER,
-                        .dsc.buffer = {buffer, 0, buffer_size}};
+    auto tgt = (print_target){.type       = PRINT_TARGET_BUFFER,
+                              .dsc.buffer = {buffer, 0, buffer_size}};
 
     // Create a copy of the event to avoid va_list issues
-    ulog_event ev_copy = *ev;
+    auto ev_copy = *ev;
     va_copy(ev_copy.message_format_args, ev->message_format_args);
 
     log_print_message(&tgt, &ev_copy);
@@ -343,7 +343,7 @@ ulog_status ulog_event_get_message(ulog_event *ev, char *buffer,
 
 #if ULOG_HAS_TOPICS
 ulog_topic_id ulog_event_get_topic(ulog_event *ev) {
-    if (ev == NULL) {
+    if (ev == nullptr) {
         return ULOG_TOPIC_ID_INVALID;  // Invalid topic
     }
     return ev->topic;
@@ -352,8 +352,8 @@ ulog_topic_id ulog_event_get_topic(ulog_event *ev) {
 
 #if ULOG_HAS_TIME
 struct tm *ulog_event_get_time(ulog_event *ev) {
-    if (ev == NULL) {
-        return NULL;
+    if (ev == nullptr) {
+        return nullptr;
     }
     return ev->time;
 }
@@ -361,14 +361,14 @@ struct tm *ulog_event_get_time(ulog_event *ev) {
 
 #if ULOG_HAS_SOURCE_LOCATION
 const char *ulog_event_get_file(ulog_event *ev) {
-    if (ev == NULL) {
-        return NULL;
+    if (ev == nullptr) {
+        return nullptr;
     }
     return ev->file;
 }
 
 int ulog_event_get_line(ulog_event *ev) {
-    if (ev == NULL) {
+    if (ev == nullptr) {
         return -1;
     }
     return ev->line;
@@ -376,7 +376,7 @@ int ulog_event_get_line(ulog_event *ev) {
 #endif  // ULOG_HAS_SOURCE_LOCATION
 
 ulog_level ulog_event_get_level(ulog_event *ev) {
-    if (ev == NULL) {
+    if (ev == nullptr) {
         return ULOG_LEVEL_TRACE;  // Invalid level
     }
     return ev->level;
@@ -395,19 +395,19 @@ typedef struct {
 } lock_data_t;
 
 static lock_data_t lock_data = {
-    .function = NULL,  // No lock function by default
-    .args     = NULL,  // No lock argument by default
+    .function = nullptr,  // No lock function by default
+    .args     = nullptr,  // No lock argument by default
 };
 
-static ulog_status lock_lock(void) {
-    if (lock_data.function != NULL) {
+static ulog_status lock_lock() {
+    if (lock_data.function != nullptr) {
         return lock_data.function(true, lock_data.args);
     }
     return ULOG_STATUS_OK;
 }
 
-static ulog_status lock_unlock(void) {
-    if (lock_data.function != NULL) {
+static ulog_status lock_unlock() {
+    if (lock_data.function != nullptr) {
         return lock_data.function(false, lock_data.args);
     }
     return ULOG_STATUS_OK;
@@ -418,8 +418,10 @@ static ulog_status lock_unlock(void) {
 
 /// @brief  Sets the lock function and user data
 ulog_status ulog_lock_set_fn(ulog_lock_fn function, void *lock_arg) {
-    if (function == NULL) {
-        return ULOG_STATUS_INVALID_ARGUMENT;
+    if (function == nullptr) {
+        lock_data.function = nullptr;
+        lock_data.args     = nullptr;
+        return ULOG_STATUS_OK;
     }
     lock_data.function = function;
     lock_data.args     = lock_arg;
@@ -442,7 +444,7 @@ static color_config color_cfg = {
 // Private
 // ================
 
-bool color_config_is_enabled(void) {
+bool color_config_is_enabled() {
     return color_cfg.enabled;
 }
 
@@ -488,7 +490,7 @@ ulog_status ulog_color_config(bool enabled) {
 
 // From https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 // ANSI color codes from least to most attention-grabbing
-static const char *color_levels[] = {
+static constexpr const char *color_levels[] = {
     "\x1b[m",            // LEVEL_0: Color reset (default)
     "\x1b[36m",          // LEVEL_1: Color (Cyan)
     "\x1b[32m",          // LEVEL_2: Color (Green)
@@ -499,7 +501,7 @@ static const char *color_levels[] = {
     "\x1b[41m\x1b[97m",  // LEVEL_7: Color (White on Red)
 };
 
-#define COLOR_TERMINATOR "\x1b[0m"
+static constexpr const char color_terminator[] = "\x1b[0m";
 
 static void color_print_start(print_target *tgt, ulog_event *ev) {
     if (!color_config_is_enabled()) {
@@ -512,7 +514,7 @@ static void color_print_end(print_target *tgt) {
     if (!color_config_is_enabled()) {
         return;  // Color is disabled, do not print color codes
     }
-    print_to_target(tgt, "%s", COLOR_TERMINATOR);  // color end
+    print_to_target(tgt, "%s", color_terminator);  // color end
 }
 
 #else  // ULOG_HAS_COLOR
@@ -542,7 +544,7 @@ static prefix_config prefix_cfg = {
 // Private
 // ================
 
-bool prefix_config_is_enabled(void) {
+bool prefix_config_is_enabled() {
     return prefix_cfg.enabled;
 }
 
@@ -590,19 +592,19 @@ typedef struct {
 } prefix_data_t;
 
 static prefix_data_t prefix_data = {
-    .function = NULL,
+    .function = nullptr,
     .prefix   = {0},
 };
 
 static void prefix_update(ulog_event *ev) {
-    if (prefix_data.function == NULL || !prefix_config_is_enabled()) {
+    if (prefix_data.function == nullptr || !prefix_config_is_enabled()) {
         return;
     }
     prefix_data.function(ev, prefix_data.prefix, ULOG_BUILD_PREFIX_SIZE);
 }
 
 static void prefix_print(print_target *tgt) {
-    if (prefix_data.function == NULL || !prefix_config_is_enabled()) {
+    if (prefix_data.function == nullptr || !prefix_config_is_enabled()) {
         return;
     }
     print_to_target(tgt, "%s", prefix_data.prefix);
@@ -615,8 +617,8 @@ ulog_status ulog_prefix_set_fn(ulog_prefix_fn function) {
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_STATUS_BUSY;
     }
-    if (function == NULL) {
-        return ULOG_STATUS_INVALID_ARGUMENT;  // Ignore NULL function
+    if (function == nullptr) {
+        return ULOG_STATUS_INVALID_ARGUMENT;  // Ignore nullptr function
     }
     prefix_data.function = function;
     return lock_unlock();
@@ -659,7 +661,7 @@ static time_config time_cfg = {
 // Private
 // ================
 
-bool time_config_is_enabled(void) {
+bool time_config_is_enabled() {
     return time_cfg.enabled;
 }
 
@@ -701,13 +703,13 @@ ulog_status ulog_time_config(bool enabled) {
 
 #include <time.h>
 
-#define TIME_SHORT_BUF_SIZE 10  // HH:MM:SS(8) + 1 space + null
-#define TIME_FULL_BUF_SIZE 21   // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
+static constexpr size_t time_short_buf_size = 10;  // HH:MM:SS(8) + 1 space + null
+static constexpr size_t time_full_buf_size  = 21;  // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
 
 // Private
 // ================
 static bool time_print_if_invalid(print_target *tgt, ulog_event *ev) {
-    if (ev->time == NULL) {
+    if (ev->time == nullptr) {
         print_to_target(tgt, "INVALID_TIME");
         return true;  // Time is invalid, print error message
     }
@@ -715,9 +717,9 @@ static bool time_print_if_invalid(print_target *tgt, ulog_event *ev) {
 }
 
 /// @brief Fills the event time with the current local time
-/// @param ev - Event to fill. Assumed not NULL
+/// @param ev - Event to fill. Assumed not nullptr
 static void time_fill_current_time(ulog_event *ev) {
-    time_t current_time = time(NULL);  // Get current time
+    auto current_time = time(nullptr);  // Get current time
     // Use localtime because existing tests inspect local clock fields.
     ev->time = localtime(&current_time);
 }
@@ -727,9 +729,9 @@ static void time_print_short(print_target *tgt, ulog_event *ev,
     if (!time_config_is_enabled() || time_print_if_invalid(tgt, ev)) {
         return;  // If time is not valid or disabled, stop printing
     }
-    char buf[TIME_SHORT_BUF_SIZE] = {0};
-    const char *format            = append_space ? "%H:%M:%S " : "%H:%M:%S";
-    strftime(buf, TIME_SHORT_BUF_SIZE, format, ev->time);
+    char buf[time_short_buf_size] = {0};
+    auto format                   = append_space ? "%H:%M:%S " : "%H:%M:%S";
+    strftime(buf, time_short_buf_size, format, ev->time);
     print_to_target(tgt, "%s", buf);
 }
 
@@ -739,10 +741,10 @@ static void time_print_full(print_target *tgt, ulog_event *ev,
     if (!time_config_is_enabled() || time_print_if_invalid(tgt, ev)) {
         return;  // If time is not valid or disabled, stop printing
     }
-    char buf[TIME_FULL_BUF_SIZE] = {0};
-    const char *format =
+    char buf[time_full_buf_size] = {0};
+    auto format =
         append_space ? "%Y-%m-%d %H:%M:%S " : "%Y-%m-%d %H:%M:%S";
-    strftime(buf, TIME_FULL_BUF_SIZE, format, ev->time);
+    strftime(buf, time_full_buf_size, format, ev->time);
     print_to_target(tgt, "%s", buf);
 }
 #else
@@ -766,26 +768,19 @@ static void time_print_full(print_target *tgt, ulog_event *ev,
 
 // Private
 // ================
-// clang-format off
-#define LEVEL_MIN_VALUE 0
-
-#define LEVEL_NAMES_SHORT {"T", "D", "I", "W", "E", "F", NULL, NULL}
-#define LEVEL_NAMES_LONG  {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", NULL, NULL}
-
-#if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
-    #define LEVEL_NAMES_DEFAULT LEVEL_NAMES_SHORT
-#else // ULOG_HAS_LEVEL_LONG or both
-    #define LEVEL_NAMES_DEFAULT LEVEL_NAMES_LONG
-#endif
-// clang-format on
+static constexpr ulog_level level_min_value = ULOG_LEVEL_0;
 
 typedef struct {
     const ulog_level_descriptor *dsc;
 } level_data_t;
 
-const ulog_level_descriptor level_names_default = {
+static constexpr ulog_level_descriptor level_names_default = {
     .max_level = ULOG_LEVEL_FATAL,
-    .names     = LEVEL_NAMES_DEFAULT,
+#if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
+    .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
+#else
+    .names     = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", nullptr, nullptr},
+#endif
 };
 
 level_data_t level_data = {
@@ -793,7 +788,7 @@ level_data_t level_data = {
 };
 
 static bool level_is_allowed(ulog_level msg_level, ulog_level log_verbosity) {
-    if (msg_level < log_verbosity || msg_level < LEVEL_MIN_VALUE) {
+    if (msg_level < log_verbosity || msg_level < level_min_value) {
         return false;  // Level is higher than the configured level, not allowed
     }
 
@@ -801,7 +796,7 @@ static bool level_is_allowed(ulog_level msg_level, ulog_level log_verbosity) {
 }
 
 static bool level_is_valid(ulog_level level) {
-    return (level >= LEVEL_MIN_VALUE && level <= level_data.dsc->max_level);
+    return (level >= level_min_value && level <= level_data.dsc->max_level);
 }
 
 static void level_print(print_target *tgt, ulog_event *ev) {
@@ -813,7 +808,7 @@ static void level_print(print_target *tgt, ulog_event *ev) {
 
 /// @brief Returns the string representation of the level
 const char *ulog_level_to_string(ulog_level level) {
-    if (level < LEVEL_MIN_VALUE || level >= level_data.dsc->max_level) {
+    if (level < level_min_value || level >= level_data.dsc->max_level) {
         return "?";  // Return a default string for invalid levels
     }
 
@@ -821,8 +816,8 @@ const char *ulog_level_to_string(ulog_level level) {
 }
 
 ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels) {
-    if (new_levels == NULL || new_levels->names[0] == NULL ||
-        new_levels->max_level <= LEVEL_MIN_VALUE) {
+    if (new_levels == nullptr || new_levels->names[0] == nullptr ||
+        new_levels->max_level <= level_min_value) {
         return ULOG_STATUS_INVALID_ARGUMENT;  // Invalid argument
     }
     if (lock_lock() != ULOG_STATUS_OK) {
@@ -833,7 +828,7 @@ ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels) {
     return lock_unlock();
 }
 
-ulog_status ulog_level_reset_levels(void) {
+ulog_status ulog_level_reset_levels() {
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_STATUS_BUSY;  // Failed to acquire lock
     }
@@ -859,12 +854,12 @@ static level_config level_cfg = {
     .short_style = false,
 };
 
-const ulog_level_descriptor level_names_default_short = {
+static constexpr ulog_level_descriptor level_names_default_short = {
     .max_level = ULOG_LEVEL_FATAL,
-    .names     = LEVEL_NAMES_SHORT,
+    .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
 };
 
-bool level_config_is_short(void) {
+bool level_config_is_short() {
     return level_cfg.short_style;
 }
 
@@ -902,7 +897,7 @@ ulog_status ulog_level_config(ulog_level_config_style style) {
 // Disabled Private
 // ================
 
-#define level_config_is_short(void) (ULOG_HAS_LEVEL_SHORT)
+#define level_config_is_short() (ULOG_HAS_LEVEL_SHORT)
 #endif  // ULOG_HAS_DYNAMIC_CONFIG
 
 /* ============================================================================
@@ -913,12 +908,12 @@ ulog_status ulog_level_config(ulog_level_config_style style) {
 //  Private
 // ================
 #if ULOG_HAS_EXTRA_OUTPUTS
-#define OUTPUT_TOTAL_NUM (1 + ULOG_BUILD_EXTRA_OUTPUTS)  // stdout + extra
+static constexpr int output_total_num = (1 + ULOG_BUILD_EXTRA_OUTPUTS);  // stdout + extra
 #else
-#define OUTPUT_TOTAL_NUM 1  // Only stdout
+static constexpr int output_total_num = 1;  // Only stdout
 #endif                      // ULOG_HAS_EXTRA_OUTPUTS
 
-#define OUTPUT_STDOUT_DEFAULT_LEVEL ULOG_LEVEL_TRACE
+static constexpr ulog_level output_stdout_default_level = ULOG_LEVEL_TRACE;
 
 // Prototypes
 static void output_stdout_handler(ulog_event *ev, void *arg);
@@ -932,21 +927,21 @@ typedef struct {
 } output;
 
 typedef struct {
-    output outputs[OUTPUT_TOTAL_NUM];  // order num = id. 0 is for stdout
+    output outputs[output_total_num];  // order num = id. 0 is for stdout
 } output_data_t;
 
 static output_data_t output_data = {
-    .outputs = {{output_stdout_handler, NULL, OUTPUT_STDOUT_DEFAULT_LEVEL}}};
+    .outputs = {{output_stdout_handler, nullptr, output_stdout_default_level}}};
 
 static void output_handle_single(ulog_event *ev, output *output) {
-    if (output->handler == NULL) {
+    if (output->handler == nullptr) {
         return;  // Output has been removed, skip it
     }
 
     if (level_is_allowed(ev->level, output->level)) {
 
         // Create event copy to avoid va_list issues
-        ulog_event ev_copy = {0};
+        auto ev_copy = (ulog_event){0};
         memcpy(&ev_copy, ev, sizeof(ulog_event));
 
         // Initialize the va_list for the copied event
@@ -961,7 +956,7 @@ static void output_handle_single(ulog_event *ev, output *output) {
 
 static void output_handle_by_id(ulog_event *ev, ulog_output_id output_id) {
     // Validate output ID bounds
-    if (output_id < 0 || output_id >= OUTPUT_TOTAL_NUM) {
+    if (output_id < 0 || output_id >= output_total_num) {
         return;  // Invalid output ID
     }
     output_handle_single(ev, &output_data.outputs[output_id]);
@@ -969,14 +964,14 @@ static void output_handle_by_id(ulog_event *ev, ulog_output_id output_id) {
 
 static void output_handle_all(ulog_event *ev) {
     // Processing the message for outputs
-    for (int i = 0; (i < OUTPUT_TOTAL_NUM); i++) {
+    for (auto i = 0; (i < output_total_num); i++) {
         output_handle_single(ev, &output_data.outputs[i]);
     }
 }
 
 static void output_stdout_handler(ulog_event *ev, void *arg) {
     (void)(arg);  // Unused
-    print_target tgt = {.type = PRINT_TARGET_STREAM, .dsc.stream = stdout};
+    auto tgt = (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = stdout};
     log_print_event(&tgt, ev, false, true, true);
 }
 
@@ -987,11 +982,11 @@ ulog_status ulog_output_level_set(ulog_output_id output, ulog_level level) {
     if (!level_is_valid(level)) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    if (output < ULOG_OUTPUT_STDOUT || output >= OUTPUT_TOTAL_NUM) {
+    if (output < ULOG_OUTPUT_STDOUT || output >= output_total_num) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
-    if (output_data.outputs[output].handler == NULL) {
+    if (output_data.outputs[output].handler == nullptr) {
         return ULOG_STATUS_NOT_FOUND;  // Output exists but no handler assigned
     }
     output_data.outputs[output].level = level;
@@ -1003,7 +998,7 @@ ulog_status ulog_output_level_set_all(ulog_level level) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
-    for (int i = 0; i < OUTPUT_TOTAL_NUM; i++) {
+    for (auto i = 0; i < output_total_num; i++) {
         output_data.outputs[i].level = level;
     }
     return ULOG_STATUS_OK;
@@ -1018,7 +1013,7 @@ ulog_status ulog_output_level_set_all(ulog_level level) {
 //  Private
 // ================
 static void output_file_handler(ulog_event *ev, void *arg) {
-    print_target tgt = {.type = PRINT_TARGET_STREAM, .dsc.stream = (FILE *)arg};
+    auto tgt = (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = (FILE *)arg};
     log_print_event(&tgt, ev, true, false, true);
 }
 
@@ -1030,8 +1025,8 @@ ulog_output_id ulog_output_add(ulog_output_handler_fn handler, void *arg,
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_OUTPUT_INVALID;
     }
-    for (int i = 0; i < OUTPUT_TOTAL_NUM; i++) {
-        if (output_data.outputs[i].handler == NULL) {
+    for (auto i = 0; i < output_total_num; i++) {
+        if (output_data.outputs[i].handler == nullptr) {
             output_data.outputs[i] = (output){handler, arg, level};
             (void)lock_unlock();
             return i;
@@ -1048,7 +1043,7 @@ ulog_output_id ulog_output_add_file(FILE *file, ulog_level level) {
 
 /// @brief Remove an output from the logging system
 ulog_status ulog_output_remove(ulog_output_id output) {
-    if (output < 0 || output >= OUTPUT_TOTAL_NUM) {
+    if (output < 0 || output >= output_total_num) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
@@ -1059,17 +1054,17 @@ ulog_status ulog_output_remove(ulog_output_id output) {
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_STATUS_BUSY;
     }
-    if (output_data.outputs[output].handler == NULL) {
+    if (output_data.outputs[output].handler == nullptr) {
         if (lock_unlock() != ULOG_STATUS_OK) {
             return ULOG_STATUS_BUSY;
         }
         return ULOG_STATUS_NOT_FOUND;  // Output not found or already removed
     }
 
-    // Mark output as removed by setting handler to NULL
-    output_data.outputs[output].handler = NULL;
-    output_data.outputs[output].arg     = NULL;
-    output_data.outputs[output].level   = ULOG_LEVEL_TRACE;
+    // Mark output as removed by setting handler to nullptr
+    output_data.outputs[output].handler = nullptr;
+    output_data.outputs[output].arg     = nullptr;
+    output_data.outputs[output].level   = output_stdout_default_level;
 
     return lock_unlock();
 }
@@ -1124,7 +1119,7 @@ static topic_config topic_cfg = {
 // Private
 // ================
 
-bool topic_config_is_enabled(void) {
+bool topic_config_is_enabled() {
     return topic_cfg.enabled;
 }
 
@@ -1176,8 +1171,8 @@ ulog_status ulog_topic_config(bool enabled) {
 
 /* Dynamic if mode equals DYNAMIC */
 #define TOPIC_IS_DYNAMIC (ULOG_BUILD_TOPICS_MODE == ULOG_BUILD_TOPICS_MODE_DYNAMIC)
-#define TOPIC_STATIC_NUM ULOG_BUILD_TOPICS_STATIC_NUM
-#define TOPIC_LEVEL_DEFAULT ULOG_LEVEL_TRACE
+static constexpr int topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM;
+static constexpr ulog_level topic_level_default = ULOG_LEVEL_TRACE;
 
 typedef struct topic_t {
     ulog_topic_id id;
@@ -1197,7 +1192,7 @@ typedef struct {
 #if TOPIC_IS_DYNAMIC
     topic_t *topics;
 #else
-    topic_t topics[TOPIC_STATIC_NUM];
+    topic_t topics[topic_static_num];
 #endif
 
 } topic_data_t;
@@ -1206,7 +1201,7 @@ static topic_data_t topic_data = {
     .new_topic_enabled = false,  // New topics are disabled by default
 
 #if TOPIC_IS_DYNAMIC
-    .topics = NULL,  // No topics allocated by default
+    .topics = nullptr,  // No topics allocated by default
 #else
     .topics = {{0}},  // Initialize static topics array to zero
 #endif
@@ -1221,7 +1216,7 @@ static ulog_topic_id topic_str_to_id(const char *str);
 
 /// @brief Gets the topic by ID
 /// @param topic - Topic ID
-/// @return Pointer to the topic if found, NULL otherwise
+/// @return Pointer to the topic if found, nullptr otherwise
 static topic_t *topic_get(ulog_topic_id topic);
 
 /// @brief Add a new topic
@@ -1241,8 +1236,8 @@ static void topic_print(print_target *tgt, ulog_event *ev) {
         return;  // Topics are disabled, do nothing
     }
 
-    topic_t *t = topic_get(ev->topic);
-    if (t != NULL) {
+    auto *t = topic_get(ev->topic);
+    if (t != nullptr) {
         print_to_target(tgt, "[%s] ", t->name);
     }
 }
@@ -1255,8 +1250,8 @@ static ulog_status topic_set_level(int topic, ulog_level level) {
     if (!level_is_valid(level)) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    topic_t *t = topic_get(topic);
-    if (t != NULL) {
+    auto *t = topic_get(topic);
+    if (t != nullptr) {
         t->level = level;
         return ULOG_STATUS_OK;
     }
@@ -1264,11 +1259,11 @@ static ulog_status topic_set_level(int topic, ulog_level level) {
 }
 
 /// @brief Checks if the topic is loggable
-/// @param t - Pointer to the topic, NULL is allowed
+/// @param t - Pointer to the topic, nullptr is allowed
 /// @param level - Log level to check against
 /// @return true if loggable, false otherwise
 static bool topic_is_loggable(topic_t *t, ulog_level level) {
-    if (t == NULL) {
+    if (t == nullptr) {
         return false;  // Topic not found, cannot log
     }
     if (!level_is_allowed(level, t->level)) {
@@ -1286,11 +1281,11 @@ static bool topic_is_loggable(topic_t *t, ulog_level level) {
 static void topic_process(const char *topic, ulog_level level,
                           bool *is_log_allowed, int *topic_id,
                           ulog_output_id *output) {
-    if (is_log_allowed == NULL || topic_id == NULL || output == NULL) {
+    if (is_log_allowed == nullptr || topic_id == nullptr || output == nullptr) {
         return;  // Invalid arguments, do nothing
     }
 
-    topic_t *t = topic_get(topic_str_to_id(topic));
+    auto *t = topic_get(topic_str_to_id(topic));
 
     *is_log_allowed = topic_is_loggable(t, level);
     if (!*is_log_allowed) {
@@ -1304,7 +1299,7 @@ static void topic_process(const char *topic, ulog_level level,
 // ================
 
 ulog_status ulog_topic_level_set(const char *topic_name, ulog_level level) {
-    ulog_topic_id topic_id = ulog_topic_get_id(topic_name);
+    auto topic_id = ulog_topic_get_id(topic_name);
     if (topic_id == ULOG_TOPIC_ID_INVALID) {
         return ULOG_STATUS_NOT_FOUND;  // Topic not found, do nothing
     }
@@ -1320,7 +1315,7 @@ ulog_topic_id ulog_topic_add(const char *topic_name, ulog_output_id output,
     if (is_str_empty(topic_name)) {
         return ULOG_TOPIC_ID_INVALID;  // Invalid topic name, do nothing
     }
-    ulog_topic_id id = topic_add(topic_name, output);
+    auto id = topic_add(topic_name, output);
     if (id != ULOG_TOPIC_ID_INVALID) {
         topic_set_level(id, level);
     }
@@ -1390,7 +1385,7 @@ ulog_status ulog_topic_remove(const char *topic_name) {
 // ================
 
 ulog_topic_id topic_str_to_id(const char *str) {
-    for (int i = 0; i < TOPIC_STATIC_NUM; i++) {
+    for (auto i = 0; i < topic_static_num; i++) {
         if (is_str_empty(topic_data.topics[i].name)) {
             continue;  // Skip empty slot; continue searching
         }
@@ -1402,10 +1397,10 @@ ulog_topic_id topic_str_to_id(const char *str) {
 }
 
 static topic_t *topic_get(ulog_topic_id topic) {
-    if (topic < TOPIC_STATIC_NUM && topic >= 0) {
+    if (topic < topic_static_num && topic >= 0) {
         return &topic_data.topics[topic];
     }
-    return NULL;
+    return nullptr;
 }
 
 static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
@@ -1415,12 +1410,12 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
     if (lock_lock() != ULOG_STATUS_OK) {  // Lock the configuration
         return ULOG_TOPIC_ID_INVALID;
     }
-    for (int i = 0; i < TOPIC_STATIC_NUM; i++) {
+    for (auto i = 0; i < topic_static_num; i++) {
         // If there is an empty slot
         if (is_str_empty(topic_data.topics[i].name)) {
             topic_data.topics[i].id     = i;
             topic_data.topics[i].name   = topic_name;
-            topic_data.topics[i].level  = TOPIC_LEVEL_DEFAULT;
+            topic_data.topics[i].level  = topic_level_default;
             topic_data.topics[i].output = output;
             (void)lock_unlock();  // Unlock the configuration
             return i;
@@ -1442,7 +1437,7 @@ static ulog_status topic_remove(const char *topic_name) {
     if (lock_lock() != ULOG_STATUS_OK) {  // Lock the configuration
         return ULOG_STATUS_BUSY;
     }
-    for (int i = 0; i < TOPIC_STATIC_NUM; i++) {
+    for (auto i = 0; i < topic_static_num; i++) {
         if (is_str_empty(topic_data.topics[i].name)) {
             continue;  // Skip empty slot; continue search
         }
@@ -1468,7 +1463,7 @@ static ulog_status topic_remove(const char *topic_name) {
 // Private
 // ================
 
-static topic_t *topic_get_first(void) {
+static topic_t *topic_get_first() {
     return topic_data.topics;
 }
 
@@ -1476,19 +1471,19 @@ static topic_t *topic_get_next(topic_t *t) {
     return t->next;
 }
 
-static topic_t *topic_get_last(void) {
-    topic_t *last = topic_data.topics;
-    if (last == NULL) {
-        return NULL;  // No topics
+static topic_t *topic_get_last() {
+    auto *last = topic_data.topics;
+    if (last == nullptr) {
+        return nullptr;  // No topics
     }
-    while (last->next != NULL) {
+    while (last->next != nullptr) {
         last = last->next;
     }
     return last;
 }
 
 ulog_topic_id topic_str_to_id(const char *str) {
-    for (topic_t *t = topic_get_first(); t != NULL; t = topic_get_next(t)) {
+    for (auto *t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (!is_str_empty(t->name) && strcmp(t->name, str) == 0) {
             return t->id;
         }
@@ -1498,40 +1493,40 @@ ulog_topic_id topic_str_to_id(const char *str) {
 
 static topic_t *topic_get(int topic) {
     if (topic < 0) {
-        return NULL;  // Invalid topic ID
+        return nullptr;  // Invalid topic ID
     }
-    for (topic_t *t = topic_get_first(); t != NULL; t = topic_get_next(t)) {
+    for (auto *t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (t->id == topic) {
             return t;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 static topic_t *topic_allocate(int id, const char *topic_name,
                                ulog_output_id output) {
     if (is_str_empty(topic_name)) {
-        return NULL;  // Invalid topic name, do not allocate
+        return nullptr;  // Invalid topic name, do not allocate
     }
     if (id < 0) {
-        return NULL;  // Invalid ID, do not allocate
+        return nullptr;  // Invalid ID, do not allocate
     }
-    topic_t *t = malloc(sizeof(topic_t));
-    if (t != NULL) {
+    auto *t = calloc(1, sizeof(topic_t));
+    if (t != nullptr) {
         // Allocate memory for the topic name and copy it
-        size_t name_len = strlen(topic_name) + 1;
-        char *name_copy = malloc(name_len);
-        if (name_copy == NULL) {
+        auto name_len = strlen(topic_name) + 1;
+        auto *name_copy = calloc(name_len, sizeof(char));
+        if (name_copy == nullptr) {
             free(t);
-            return NULL;  // Failed to allocate memory for name
+            return nullptr;  // Failed to allocate memory for name
         }
-        strcpy(name_copy, topic_name);
+        memcpy(name_copy, topic_name, name_len);
 
         t->id     = id;
         t->name   = name_copy;
-        t->level  = TOPIC_LEVEL_DEFAULT;
+        t->level  = topic_level_default;
         t->output = output;
-        t->next   = NULL;
+        t->next   = nullptr;
     }
     return t;
 }
@@ -1542,7 +1537,7 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
     }
 
     // if exists
-    for (topic_t *t = topic_get_first(); t != NULL; t = topic_get_next(t)) {
+    for (auto *t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (!is_str_empty(t->name) && strcmp(t->name, topic_name) == 0) {
             return t->id;
         }
@@ -1552,10 +1547,10 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_TOPIC_ID_INVALID;
     }
-    topic_t *t = topic_get_last();
-    if (t == NULL) {
+    auto *t = topic_get_last();
+    if (t == nullptr) {
         topic_data.topics = topic_allocate(0, topic_name, output);
-        if (topic_data.topics != NULL) {
+        if (topic_data.topics != nullptr) {
             (void)lock_unlock();
             return 0;
         }
@@ -1581,13 +1576,13 @@ static ulog_status topic_remove(const char *topic_name) {
         return ULOG_STATUS_BUSY;
     }
 
-    topic_t *t      = topic_get_first();
-    topic_t *t_prev = NULL;
+    auto *t      = topic_get_first();
+    topic_t *t_prev = nullptr;
 
-    while (t != NULL) {
+    while (t != nullptr) {
         if (!is_str_empty(t->name) && strcmp(t->name, topic_name) == 0) {
             // Found the topic to remove
-            if (t_prev == NULL) {
+            if (t_prev == nullptr) {
                 // Removing the first topic
                 topic_data.topics = t->next;
             } else {
@@ -1626,7 +1621,7 @@ static src_loc_config src_loc_cfg = {
 // Private
 // ================
 
-bool src_loc_config_is_enabled(void) {
+bool src_loc_config_is_enabled() {
     return src_loc_cfg.enabled;
 }
 
@@ -1676,7 +1671,7 @@ ulog_status ulog_source_location_config(bool enabled) {
 static void log_print_message(print_target *tgt, ulog_event *ev) {
 
 #if ULOG_HAS_SOURCE_LOCATION
-    if (src_loc_config_is_enabled() && ev->file != NULL) {
+    if (src_loc_config_is_enabled() && ev->file != nullptr) {
         print_to_target(tgt, "%s:%d: ", ev->file, ev->line);  // file and line
     }
 #endif  // ULOG_HAS_SOURCE_LOCATION
@@ -1685,7 +1680,7 @@ static void log_print_message(print_target *tgt, ulog_event *ev) {
         print_to_target_valist(tgt, ev->message,
                                ev->message_format_args);  // message
     } else {
-        print_to_target(tgt, "NULL");  // message
+        print_to_target(tgt, "nullptr");  // message
     }
 }
 
@@ -1708,10 +1703,10 @@ static void log_print_event(print_target *tgt, ulog_event *ev, bool full_time,
 
     color ? color_print_start(tgt, ev) : (void)0;
 
-    bool append_space = true;
+    auto append_space = true;
     (void)append_space;  // May be unused if no prefix and time
 #if ULOG_HAS_PREFIX
-    if (prefix_data.function != NULL) {
+    if (prefix_data.function != nullptr) {
         append_space = false;  // Prefix does not need leading space
     }
 #endif
@@ -1730,7 +1725,7 @@ static void log_print_event(print_target *tgt, ulog_event *ev, bool full_time,
 
 void log_fill_event(ulog_event *ev, const char *message, ulog_level level,
                     const char *file, int line, int topic_id) {
-    if (ev == NULL) {
+    if (ev == nullptr) {
         return;  // Invalid event, do nothing
     }
 
@@ -1751,7 +1746,7 @@ void log_fill_event(ulog_event *ev, const char *message, ulog_level level,
 #endif
 
 #if ULOG_HAS_TIME
-    ev->time = NULL;  // Time will be filled later
+    ev->time = nullptr;  // Time will be filled later
 #endif
 
     time_fill_current_time(ev);  // Fill time with current value
@@ -1761,14 +1756,14 @@ void log_fill_event(ulog_event *ev, const char *message, ulog_level level,
 // ================
 
 ulog_status ulog_event_to_cstr(ulog_event *ev, char *out, size_t out_size) {
-    if (ev == NULL || out == NULL || out_size == 0) {
+    if (ev == nullptr || out == nullptr || out_size == 0) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    print_target tgt = {.type       = PRINT_TARGET_BUFFER,
-                        .dsc.buffer = {out, 0, out_size}};
+    auto tgt = (print_target){.type       = PRINT_TARGET_BUFFER,
+                              .dsc.buffer = {out, 0, out_size}};
 
     // Create a copy of the event to avoid va_list issues
-    ulog_event ev_copy = *ev;
+    auto ev_copy = *ev;
     va_copy(ev_copy.message_format_args, ev->message_format_args);
 
     log_print_event(&tgt, &ev_copy, false, false, false);
@@ -1785,10 +1780,10 @@ void ulog_log(ulog_level level, const char *file, int line, const char *topic,
 
     // Try to get topic ID, outputs and check if logging is allowed for this
     // topic
-    ulog_output_id output = ULOG_OUTPUT_ALL;
-    int topic_id          = -1;
+    auto output = ULOG_OUTPUT_ALL;
+    auto topic_id = -1;
     if (!is_str_empty(topic)) {
-        bool is_log_allowed = false;
+        auto is_log_allowed = false;
         topic_process(topic, level, &is_log_allowed, &topic_id, &output);
         if (!is_log_allowed) {
             (void)lock_unlock();
@@ -1796,7 +1791,7 @@ void ulog_log(ulog_level level, const char *file, int line, const char *topic,
         }
     }
 
-    ulog_event ev = {0};
+    auto ev = (ulog_event){0};
     log_fill_event(&ev, message, level, file, line, topic_id);
     va_start(ev.message_format_args, message);
 
@@ -1822,7 +1817,7 @@ void ulog_log(ulog_level level, const char *file, int line, const char *topic,
 // Public
 // ================
 
-ulog_status ulog_cleanup(void) {
+ulog_status ulog_cleanup() {
     if (lock_lock() != ULOG_STATUS_OK) {  // Lock the configuration
         return ULOG_STATUS_BUSY;
     }
@@ -1834,14 +1829,14 @@ ulog_status ulog_cleanup(void) {
     topic_data.new_topic_enabled = false;
 #if TOPIC_IS_DYNAMIC
     // Free linked list of dynamically allocated topics
-    topic_t *t = topic_data.topics;
-    while (t != NULL) {
-        topic_t *next = t->next;
+    auto *t = topic_data.topics;
+    while (t != nullptr) {
+        auto *next = t->next;
         free((void *)t->name);  // Free the allocated topic name
         free(t);
         t = next;
     }
-    topic_data.topics = NULL;
+    topic_data.topics = nullptr;
 #else
     // Zero out statically allocated topic array
     memset(topic_data.topics, 0, sizeof(topic_data.topics));
@@ -1849,18 +1844,18 @@ ulog_status ulog_cleanup(void) {
 #endif  // ULOG_HAS_TOPICS
 
     // Cleanup Outputs (keep stdout (index 0) registered but reset its level)
-    output_data.outputs[ULOG_OUTPUT_STDOUT].level = OUTPUT_STDOUT_DEFAULT_LEVEL;
+    output_data.outputs[ULOG_OUTPUT_STDOUT].level = output_stdout_default_level;
 #if ULOG_HAS_EXTRA_OUTPUTS
-    for (int i = 1; i < OUTPUT_TOTAL_NUM; i++) {
-        output_data.outputs[i].handler = NULL;
-        output_data.outputs[i].arg     = NULL;
-        output_data.outputs[i].level   = OUTPUT_STDOUT_DEFAULT_LEVEL;
+    for (auto i = 1; i < output_total_num; i++) {
+        output_data.outputs[i].handler = nullptr;
+        output_data.outputs[i].arg     = nullptr;
+        output_data.outputs[i].level   = output_stdout_default_level;
     }
 #endif  // ULOG_HAS_EXTRA_OUTPUTS
 
 #if ULOG_HAS_PREFIX
     // Reset prefix state
-    prefix_data.function = NULL;
+    prefix_data.function = nullptr;
     memset(prefix_data.prefix, 0, sizeof(prefix_data.prefix));
 #endif
 
