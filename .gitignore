@@ -15,3 +15,5 @@ build_tests
 
 .zig-cache
 zig-out
+
+ulog_all_features.log
