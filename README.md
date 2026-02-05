@@ -4,7 +4,7 @@ A small, portable, and configurable logging library for C23. It favors minimal o
 
 **Key Features**
 - C23-first API and implementation
-- Single translation unit core (`src/ulog.c`) + public header (`include/ulog.h`)
+- Single translation unit core (`src/ulog.c`) + public header (`include/ulog/ulog.h`)
 - Compile-time feature selection with optional runtime toggles
 - Topics, custom outputs, and custom prefixes
 - Optional timestamps, source locations, and colorized output
@@ -13,7 +13,7 @@ A small, portable, and configurable logging library for C23. It favors minimal o
 
 **Quick Start**
 
-1. Add `include/ulog.h` and `src/ulog.c` to your build.
+1. Add `include/ulog/ulog.h` and `src/ulog.c` to your build.
 2. Compile with C23 enabled.
 
 ```sh
@@ -21,7 +21,7 @@ cc -std=c23 -Iinclude src/ulog.c main.c -o app
 ```
 
 ```c
-#include "ulog.h"
+#include "ulog/ulog.h"
 
 int main() {
     ulog_info("boot %d", 1);
@@ -40,7 +40,7 @@ int main() {
 
 **Build Configuration**
 
-Define `ULOG_BUILD_*` macros before including `ulog.h` or via compiler flags. Defaults are shown below.
+Define `ULOG_BUILD_*` macros before including `ulog/ulog.h` or via compiler flags. Defaults are shown below.
 If you set `ULOG_BUILD_CONFIG_HEADER_ENABLED`, define all `ULOG_BUILD_*` values in the header named by
 `ULOG_BUILD_CONFIG_HEADER_NAME` and do not define them elsewhere.
 
@@ -71,7 +71,7 @@ Example:
 
 ```c
 #define ULOG_BUILD_TOPICS_MODE ULOG_BUILD_TOPICS_MODE_DYNAMIC
-#include "ulog.h"
+#include "ulog/ulog.h"
 
 void net_init() {
     ulog_topic_add("net", ULOG_OUTPUT_ALL, ULOG_LEVEL_INFO);

@@ -22,7 +22,7 @@
 
 #pragma once
 
-#include "ulog.h"
+#include "ulog/ulog.h"
 
 
 /// @brief Mapping constants for syslog severity names.

@@ -14,7 +14,7 @@
 
 #pragma once
 #include <pthread.h>
-#include "ulog.h"
+#include "ulog/ulog.h"
 
 /**
  * @brief Enable locking with an existing, already initialized pthread mutex.

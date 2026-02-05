@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "ulog.h"
+#include "ulog/ulog.h"
 #include "ulog_generic_interface.h"
 #include "ulog_syslog.h"
 

@@ -16,7 +16,7 @@ For information about interface and usage see the extension headers in the `exte
 
 ## Level Extensions
 
-This set of extensions provides alternative log level descriptors that can be enabled at runtime. They replace the default levels defined in `ulog.h`.
+This set of extensions provides alternative log level descriptors that can be enabled at runtime. They replace the default levels defined in `ulog/ulog.h`.
 
 | Extension | Description                                                        | Main Header                                    |
 | --------- | ------------------------------------------------------------------ | ---------------------------------------------- |
@@ -49,7 +49,7 @@ This set of extensions provides additional logging features and integrations.
 
 1. Create `extensions/ulog_<name>.h/.c`.
 2. Expose a small enable/disable API returning `ulog_status`.
-3. Keep core dependency limited to `ulog.h`.
+3. Keep core dependency limited to `ulog/ulog.h`.
 4. Document usage in the header and add it to this file.
 
 Feel free to submit a PR with additional platforms or higher-level outputs.

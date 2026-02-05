@@ -18,7 +18,7 @@ run-all-features:
 
 format:
     {{CLANG_FORMAT}} -i \
-        include/ulog.h \
+        include/ulog/ulog.h \
         src/ulog.c \
         examples/ulog_example.c \
         examples/ulog_all_features.c \

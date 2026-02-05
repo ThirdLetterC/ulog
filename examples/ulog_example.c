@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-#include "ulog.h"
+#include "ulog/ulog.h"
 
 int main() {
     constexpr unsigned boot_id     = 1U;
