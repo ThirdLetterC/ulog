@@ -12,3 +12,6 @@ example.log
 
 # Tests
 build_tests
+
+.zig-cache
+zig-out

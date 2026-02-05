@@ -258,14 +258,14 @@ typedef struct {
 static void print_to_target_valist(print_target *tgt, const char *format,
                                    va_list args) {
     if (tgt->type == PRINT_TARGET_BUFFER) {
-        auto *buf = &tgt->dsc.buffer;
+        auto buf = &tgt->dsc.buffer;
 
         if (buf->curr_pos >= buf->size) {
             return;  // No space available
         }
 
         auto remaining = buf->size - buf->curr_pos;
-        auto *write_pos  = buf->data + buf->curr_pos;
+        auto write_pos  = buf->data + buf->curr_pos;
 
         auto written = vsnprintf(write_pos, remaining, format, args);
         if (written < 0) {
@@ -774,7 +774,7 @@ typedef struct {
     const ulog_level_descriptor *dsc;
 } level_data_t;
 
-static constexpr ulog_level_descriptor level_names_default = {
+static const ulog_level_descriptor level_names_default = {
     .max_level = ULOG_LEVEL_FATAL,
 #if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
     .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
@@ -854,7 +854,7 @@ static level_config level_cfg = {
     .short_style = false,
 };
 
-static constexpr ulog_level_descriptor level_names_default_short = {
+static const ulog_level_descriptor level_names_default_short = {
     .max_level = ULOG_LEVEL_FATAL,
     .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
 };
