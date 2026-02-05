@@ -25,22 +25,6 @@
 
 struct tm;
 
-#ifndef __cplusplus
-// Compatibility layer for C compilers that don't yet implement all C23
-// keywords. `constexpr` is C23, but not universally supported in current
-// toolchains.
-#if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 202311L)
-#ifndef constexpr
-#define constexpr const
-#endif
-#endif
-
-#endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* ============================================================================
    Core: Status
 ============================================================================ */
@@ -605,7 +589,3 @@ ULOG_INLINE ulog_status ulog_topic_remove(const char *topic_name)
 #undef ULOG_INLINE // not to expose it
 // clang-format on
 #endif  // ULOG_BUILD_DISABLED
-
-#ifdef __cplusplus
-}
-#endif

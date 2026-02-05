@@ -16,9 +16,6 @@
 #include <pthread.h>
 #include "ulog.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 /**
  * @brief Enable locking with an existing, already initialized pthread mutex.
  * @param mtx Pointer to initialized mutex.
@@ -32,7 +29,3 @@ extern "C" {
  * @return ULOG_STATUS_OK always.
  */
 [[nodiscard]] ulog_status ulog_lock_pthread_disable();
-
-#ifdef __cplusplus
-}
-#endif

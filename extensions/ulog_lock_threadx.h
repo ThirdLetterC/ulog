@@ -15,9 +15,6 @@
 #include "tx_api.h"
 #include "ulog.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief Enable locking with an existing ThreadX mutex.
@@ -30,7 +27,3 @@ extern "C" {
  * @brief Disable logging lock (clears lock function). Does not delete mutex.
  */
 [[nodiscard]] ulog_status ulog_lock_threadx_disable();
-
-#ifdef __cplusplus
-}
-#endif

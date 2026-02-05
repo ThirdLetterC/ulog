@@ -14,9 +14,6 @@
 #include "cmsis_os2.h"
 #include "ulog.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief Enable locking with an existing CMSIS-RTOS2 mutex id.
@@ -28,7 +25,3 @@ extern "C" {
  * @brief Disable logging lock (clears lock function). Keeps mutex.
  */
 [[nodiscard]] ulog_status ulog_lock_cmsis_disable();
-
-#ifdef __cplusplus
-}
-#endif

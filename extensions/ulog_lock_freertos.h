@@ -16,9 +16,6 @@
 #include "semphr.h"
 #include "ulog.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * @brief Enable locking using an existing FreeRTOS mutex.
@@ -31,7 +28,3 @@ extern "C" {
  * @brief Disable logging lock (clears lock function). Keeps mutex allocated.
  */
 [[nodiscard]] ulog_status ulog_lock_freertos_disable();
-
-#ifdef __cplusplus
-}
-#endif

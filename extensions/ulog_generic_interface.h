@@ -20,9 +20,6 @@
 
 #pragma once
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #include "ulog.h"
 
@@ -46,7 +43,3 @@ typedef enum {
 /// @param topic A string topic (e.g. "NET", "UI") to categorize the message.
 /// @param ... printf-style format string and arguments.
 #define log_topic(level, topic, ...) ulog_t(level, topic, __VA_ARGS__)
-
-#ifdef __cplusplus
-}
-#endif

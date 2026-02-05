@@ -24,9 +24,6 @@
 
 #include "ulog.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /* ============================================================================
    Core: Log Level Enum Compatibility
@@ -361,7 +358,3 @@ static inline int ulog_disable_all_topics() {
 
 // Note: ULOG_FEATURE_EMOJI_LEVELS is not supported in v7.x
 #define ULOG_FEATURE_EMOJI_LEVELS false
-
-#ifdef __cplusplus
-}
-#endif

@@ -24,9 +24,6 @@
 
 #include "ulog.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /// @brief Mapping constants for syslog severity names.
 /// RFC 5424 severities ascending in numeric value but descending in priority.
@@ -85,7 +82,3 @@ extern "C" {
 /// @brief Disable syslog level names and restore default microlog levels.
 /// @return ULOG_STATUS_OK on success, error otherwise.
 [[nodiscard]] ulog_status ulog_syslog_disable();
-
-#ifdef __cplusplus
-}
-#endif
