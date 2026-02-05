@@ -19,7 +19,7 @@ static ulog_status pthread_lock_fn(bool lock, void *arg) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
-    auto *mtx = (pthread_mutex_t *)arg;
+    auto mtx = (pthread_mutex_t *)arg;
     auto rc   = -1;
 
     if (lock) {
