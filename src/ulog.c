@@ -225,7 +225,7 @@ static inline bool is_str_empty(const char *str) {
     warn_non_enabled_full(__func__, feature, __FILE__, __LINE__)
 
 #define warn_non_enabled_full(func, feature, file, line)                       \
-    ulog_log(ULOG_LEVEL_WARN, file, line, nullptr,                                \
+    ulog_log(ULOG_LEVEL_WARN, file, line, nullptr,                             \
              "'%s' called with %s disabled", func, feature)
 
 #endif  // ULOG_HAS_WARN_NOT_ENABLED
@@ -265,7 +265,7 @@ static void print_to_target_valist(print_target *tgt, const char *format,
         }
 
         auto remaining = buf->size - buf->curr_pos;
-        auto write_pos  = buf->data + buf->curr_pos;
+        auto write_pos = buf->data + buf->curr_pos;
 
         auto written = vsnprintf(write_pos, remaining, format, args);
         if (written < 0) {
@@ -744,8 +744,7 @@ static void time_print_full(print_target *tgt, ulog_event *ev,
         return;  // If time is not valid or disabled, stop printing
     }
     char buf[time_full_buf_size] = {0};
-    auto format =
-        append_space ? "%Y-%m-%d %H:%M:%S " : "%Y-%m-%d %H:%M:%S";
+    auto format = append_space ? "%Y-%m-%d %H:%M:%S " : "%Y-%m-%d %H:%M:%S";
     strftime(buf, time_full_buf_size, format, ev->time);
     print_to_target(tgt, "%s", buf);
 }
@@ -779,9 +778,10 @@ typedef struct {
 static const ulog_level_descriptor level_names_default = {
     .max_level = ULOG_LEVEL_FATAL,
 #if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
-    .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
+    .names = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
 #else
-    .names     = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", nullptr, nullptr},
+    .names = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", nullptr,
+              nullptr},
 #endif
 };
 
@@ -973,7 +973,8 @@ static void output_handle_all(ulog_event *ev) {
 
 static void output_stdout_handler(ulog_event *ev, void *arg) {
     (void)(arg);  // Unused
-    auto tgt = (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = stdout};
+    auto tgt =
+        (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = stdout};
     log_print_event(&tgt, ev, false, true, true);
 }
 
@@ -1015,7 +1016,8 @@ ulog_status ulog_output_level_set_all(ulog_level level) {
 //  Private
 // ================
 static void output_file_handler(ulog_event *ev, void *arg) {
-    auto tgt = (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = (FILE *)arg};
+    auto tgt =
+        (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = (FILE *)arg};
     log_print_event(&tgt, ev, true, false, true);
 }
 
@@ -1167,12 +1169,13 @@ ulog_status ulog_topic_config(bool enabled) {
 // Private
 // ================
 #ifndef ULOG_BUILD_TOPICS_STATIC_NUM
-    /* If static count not provided, default to 0 */
-    #define ULOG_BUILD_TOPICS_STATIC_NUM 0
+/* If static count not provided, default to 0 */
+#define ULOG_BUILD_TOPICS_STATIC_NUM 0
 #endif
 
 /* Dynamic if mode equals DYNAMIC */
-#define TOPIC_IS_DYNAMIC (ULOG_BUILD_TOPICS_MODE == ULOG_BUILD_TOPICS_MODE_DYNAMIC)
+#define TOPIC_IS_DYNAMIC                                                       \
+    (ULOG_BUILD_TOPICS_MODE == ULOG_BUILD_TOPICS_MODE_DYNAMIC)
 enum { topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM };
 static constexpr ulog_level topic_level_default = ULOG_LEVEL_TRACE;
 
@@ -1516,7 +1519,7 @@ static topic_t *topic_allocate(int id, const char *topic_name,
     auto t = (topic_t *)calloc(1, sizeof(topic_t));
     if (t != nullptr) {
         // Allocate memory for the topic name and copy it
-        auto name_len = strlen(topic_name) + 1;
+        auto name_len  = strlen(topic_name) + 1;
         auto name_copy = (char *)calloc(name_len, sizeof(char));
         if (name_copy == nullptr) {
             free(t);
@@ -1578,7 +1581,7 @@ static ulog_status topic_remove(const char *topic_name) {
         return ULOG_STATUS_BUSY;
     }
 
-    auto t = topic_get_first();
+    auto t          = topic_get_first();
     topic_t *t_prev = nullptr;
 
     while (t != nullptr) {
@@ -1782,7 +1785,7 @@ void ulog_log(ulog_level level, const char *file, int line, const char *topic,
 
     // Try to get topic ID, outputs and check if logging is allowed for this
     // topic
-    auto output = ULOG_OUTPUT_ALL;
+    auto output   = ULOG_OUTPUT_ALL;
     auto topic_id = -1;
     if (!is_str_empty(topic)) {
         auto is_log_allowed = false;

@@ -70,14 +70,14 @@ static void example_prefix(ulog_event *ev, char *prefix, size_t prefix_size) {
         file = "?";
     }
 
-    auto level = ulog_event_get_level(ev);
+    auto level             = ulog_event_get_level(ev);
     const char *level_name = ulog_level_to_string(level);
     if (level_name == nullptr) {
         level_name = "?";
     }
 
     char time_buf[EXAMPLE_TIME_SIZE] = {0};
-    auto ts = ulog_event_get_time(ev);
+    auto ts                          = ulog_event_get_time(ev);
     if (ts != nullptr) {
         (void)strftime(time_buf, sizeof(time_buf), "%H:%M:%S", ts);
     }
@@ -108,7 +108,7 @@ static void example_output(ulog_event *ev, void *arg) {
         fprintf(state->stream, "message-only: %s\n", msg);
     }
 
-    auto level = ulog_event_get_level(ev);
+    auto level             = ulog_event_get_level(ev);
     const char *level_name = ulog_level_to_string(level);
     if (level_name == nullptr) {
         level_name = "?";
@@ -119,17 +119,16 @@ static void example_output(ulog_event *ev, void *arg) {
         file = "?";
     }
 
-    auto topic = ulog_event_get_topic(ev);
+    auto topic        = ulog_event_get_topic(ev);
     const int line_no = ulog_event_get_line(ev);
 
     char time_buf[EXAMPLE_TIME_SIZE] = {0};
-    auto ts = ulog_event_get_time(ev);
+    auto ts                          = ulog_event_get_time(ev);
     if (ts != nullptr) {
         (void)strftime(time_buf, sizeof(time_buf), "%H:%M:%S", ts);
     }
 
-    fprintf(state->stream,
-            "meta: level=%s file=%s line=%d topic=%d time=%s\n",
+    fprintf(state->stream, "meta: level=%s file=%s line=%d topic=%d time=%s\n",
             level_name, file, line_no, (int)topic,
             (time_buf[0] != '\0') ? time_buf : "--:--:--");
 
@@ -138,7 +137,7 @@ static void example_output(ulog_event *ev, void *arg) {
 
 int main() {
     example_lock_state lock_state = {.locked = false, .depth = 0U};
-    auto status = ulog_lock_set_fn(example_lock, &lock_state);
+    auto status                   = ulog_lock_set_fn(example_lock, &lock_state);
     print_status("ulog_lock_set_fn", status);
 
     status = ulog_color_config(true);
@@ -162,7 +161,7 @@ int main() {
     status = ulog_output_level_set(ULOG_OUTPUT_STDOUT, ULOG_LEVEL_TRACE);
     print_status("ulog_output_level_set(stdout)", status);
 
-    FILE *log_file = fopen("ulog_all_features.log", "w");
+    FILE *log_file             = fopen("ulog_all_features.log", "w");
     ulog_output_id file_output = ULOG_OUTPUT_INVALID;
     if (log_file != nullptr) {
         file_output = ulog_output_add_file(log_file, ULOG_LEVEL_DEBUG);
@@ -176,7 +175,8 @@ int main() {
     }
 
     example_output_state mirror_state = {.stream = stderr, .lines = 0U};
-    auto mirror_output = ulog_output_add(example_output, &mirror_state, ULOG_LEVEL_INFO);
+    auto mirror_output =
+        ulog_output_add(example_output, &mirror_state, ULOG_LEVEL_INFO);
     if (mirror_output == ULOG_OUTPUT_INVALID) {
         fprintf(stderr, "mirror output: failed to add\n");
     }
@@ -197,8 +197,8 @@ int main() {
 
     static const ulog_level_descriptor custom_levels = {
         .max_level = ULOG_LEVEL_7,
-        .names     = {"ZERO ", "ONE  ", "TWO  ", "THREE", "FOUR ", "FIVE ",
-                      "SIX  ", "SEVEN"},
+        .names = {"ZERO ", "ONE  ", "TWO  ", "THREE", "FOUR ", "FIVE ", "SIX  ",
+                  "SEVEN"},
     };
     status = ulog_level_set_new_levels(&custom_levels);
     print_status("ulog_level_set_new_levels", status);

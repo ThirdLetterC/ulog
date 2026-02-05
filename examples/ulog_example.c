@@ -3,7 +3,7 @@
 #include "ulog.h"
 
 int main() {
-    constexpr unsigned boot_id = 1U;
+    constexpr unsigned boot_id     = 1U;
     constexpr unsigned battery_pct = 12U;
 
     ulog_info("boot %u", boot_id);
