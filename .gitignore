@@ -17,3 +17,8 @@ build_tests
 zig-out
 
 ulog_all_features.log
+
+ulog_all_features
+ulog_example
+
+*.o

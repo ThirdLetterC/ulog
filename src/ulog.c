@@ -703,8 +703,10 @@ ulog_status ulog_time_config(bool enabled) {
 
 #include <time.h>
 
-static constexpr size_t time_short_buf_size = 10;  // HH:MM:SS(8) + 1 space + null
-static constexpr size_t time_full_buf_size  = 21;  // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
+enum {
+    time_short_buf_size = 10,  // HH:MM:SS(8) + 1 space + null
+    time_full_buf_size  = 21,  // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
+};
 
 // Private
 // ================
@@ -908,10 +910,10 @@ ulog_status ulog_level_config(ulog_level_config_style style) {
 //  Private
 // ================
 #if ULOG_HAS_EXTRA_OUTPUTS
-static constexpr int output_total_num = (1 + ULOG_BUILD_EXTRA_OUTPUTS);  // stdout + extra
+enum { output_total_num = (1 + ULOG_BUILD_EXTRA_OUTPUTS) };  // stdout + extra
 #else
-static constexpr int output_total_num = 1;  // Only stdout
-#endif                      // ULOG_HAS_EXTRA_OUTPUTS
+enum { output_total_num = 1 };  // Only stdout
+#endif  // ULOG_HAS_EXTRA_OUTPUTS
 
 static constexpr ulog_level output_stdout_default_level = ULOG_LEVEL_TRACE;
 
@@ -1171,7 +1173,7 @@ ulog_status ulog_topic_config(bool enabled) {
 
 /* Dynamic if mode equals DYNAMIC */
 #define TOPIC_IS_DYNAMIC (ULOG_BUILD_TOPICS_MODE == ULOG_BUILD_TOPICS_MODE_DYNAMIC)
-[[maybe_unused]] static constexpr int topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM;
+enum { topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM };
 static constexpr ulog_level topic_level_default = ULOG_LEVEL_TRACE;
 
 typedef struct topic_t {

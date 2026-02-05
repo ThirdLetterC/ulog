@@ -25,6 +25,26 @@
 
 struct tm;
 
+#ifndef __cplusplus
+    // Compatibility layer for C compilers that don't yet implement all C23 keywords.
+    // `constexpr` is C23, but not universally supported in current toolchains.
+    #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 202311L)
+        #ifndef constexpr
+            #define constexpr const
+        #endif
+    #endif
+
+    // Provide C-style type inference in C using compiler support.
+    // Users can disable this macro by defining ULOG_DISABLE_AUTO_MACRO.
+    #ifndef ULOG_DISABLE_AUTO_MACRO
+        #if defined(__GNUC__) || defined(__clang__)
+            #ifndef auto
+                #define auto __auto_type
+            #endif
+        #endif
+    #endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

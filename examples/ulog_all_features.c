@@ -16,9 +16,11 @@ typedef struct {
     unsigned lines;
 } example_output_state;
 
-static constexpr size_t EXAMPLE_LINE_SIZE = 256;
-static constexpr size_t EXAMPLE_MSG_SIZE = 128;
-static constexpr size_t EXAMPLE_TIME_SIZE = 16;
+enum {
+    EXAMPLE_LINE_SIZE = 256,
+    EXAMPLE_MSG_SIZE  = 128,
+    EXAMPLE_TIME_SIZE = 16,
+};
 
 static void print_status(const char *label, ulog_status status) {
     if (status == ULOG_STATUS_OK) {
