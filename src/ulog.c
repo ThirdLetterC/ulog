@@ -808,7 +808,7 @@ static void level_print(print_target *tgt, ulog_event *ev) {
 
 /// @brief Returns the string representation of the level
 const char *ulog_level_to_string(ulog_level level) {
-    if (level < level_min_value || level >= level_data.dsc->max_level) {
+    if (level < level_min_value || level > level_data.dsc->max_level) {
         return "?";  // Return a default string for invalid levels
     }
 
@@ -1706,7 +1706,7 @@ static void log_print_event(print_target *tgt, ulog_event *ev, bool full_time,
     auto append_space = true;
     (void)append_space;  // May be unused if no prefix and time
 #if ULOG_HAS_PREFIX
-    if (prefix_data.function != nullptr) {
+    if (prefix_data.function != nullptr && prefix_config_is_enabled()) {
         append_space = false;  // Prefix does not need leading space
     }
 #endif
