@@ -8,7 +8,7 @@ static ulog_status threadx_lock_fn(bool lock, void *arg) {
     if (arg == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    auto *m = (TX_MUTEX *)arg;
+    auto m = (TX_MUTEX *)arg;
     auto rc = TX_SUCCESS;
     if (lock) {
         rc = tx_mutex_get(m, TX_WAIT_FOREVER);

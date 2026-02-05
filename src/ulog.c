@@ -490,7 +490,7 @@ ulog_status ulog_color_config(bool enabled) {
 
 // From https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
 // ANSI color codes from least to most attention-grabbing
-static constexpr const char *color_levels[] = {
+static constexpr const char color_levels[][11] = {
     "\x1b[m",            // LEVEL_0: Color reset (default)
     "\x1b[36m",          // LEVEL_1: Color (Cyan)
     "\x1b[32m",          // LEVEL_2: Color (Green)
@@ -1171,7 +1171,7 @@ ulog_status ulog_topic_config(bool enabled) {
 
 /* Dynamic if mode equals DYNAMIC */
 #define TOPIC_IS_DYNAMIC (ULOG_BUILD_TOPICS_MODE == ULOG_BUILD_TOPICS_MODE_DYNAMIC)
-static constexpr int topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM;
+[[maybe_unused]] static constexpr int topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM;
 static constexpr ulog_level topic_level_default = ULOG_LEVEL_TRACE;
 
 typedef struct topic_t {
@@ -1236,7 +1236,7 @@ static void topic_print(print_target *tgt, ulog_event *ev) {
         return;  // Topics are disabled, do nothing
     }
 
-    auto *t = topic_get(ev->topic);
+    auto t = topic_get(ev->topic);
     if (t != nullptr) {
         print_to_target(tgt, "[%s] ", t->name);
     }
@@ -1250,7 +1250,7 @@ static ulog_status topic_set_level(int topic, ulog_level level) {
     if (!level_is_valid(level)) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    auto *t = topic_get(topic);
+    auto t = topic_get(topic);
     if (t != nullptr) {
         t->level = level;
         return ULOG_STATUS_OK;
@@ -1285,7 +1285,7 @@ static void topic_process(const char *topic, ulog_level level,
         return;  // Invalid arguments, do nothing
     }
 
-    auto *t = topic_get(topic_str_to_id(topic));
+    auto t = topic_get(topic_str_to_id(topic));
 
     *is_log_allowed = topic_is_loggable(t, level);
     if (!*is_log_allowed) {
@@ -1472,7 +1472,7 @@ static topic_t *topic_get_next(topic_t *t) {
 }
 
 static topic_t *topic_get_last() {
-    auto *last = topic_data.topics;
+    auto last = topic_data.topics;
     if (last == nullptr) {
         return nullptr;  // No topics
     }
@@ -1483,7 +1483,7 @@ static topic_t *topic_get_last() {
 }
 
 ulog_topic_id topic_str_to_id(const char *str) {
-    for (auto *t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
+    for (auto t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (!is_str_empty(t->name) && strcmp(t->name, str) == 0) {
             return t->id;
         }
@@ -1495,7 +1495,7 @@ static topic_t *topic_get(int topic) {
     if (topic < 0) {
         return nullptr;  // Invalid topic ID
     }
-    for (auto *t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
+    for (auto t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (t->id == topic) {
             return t;
         }
@@ -1511,11 +1511,11 @@ static topic_t *topic_allocate(int id, const char *topic_name,
     if (id < 0) {
         return nullptr;  // Invalid ID, do not allocate
     }
-    auto *t = calloc(1, sizeof(topic_t));
+    auto t = (topic_t *)calloc(1, sizeof(topic_t));
     if (t != nullptr) {
         // Allocate memory for the topic name and copy it
         auto name_len = strlen(topic_name) + 1;
-        auto *name_copy = calloc(name_len, sizeof(char));
+        auto name_copy = (char *)calloc(name_len, sizeof(char));
         if (name_copy == nullptr) {
             free(t);
             return nullptr;  // Failed to allocate memory for name
@@ -1537,7 +1537,7 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
     }
 
     // if exists
-    for (auto *t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
+    for (auto t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (!is_str_empty(t->name) && strcmp(t->name, topic_name) == 0) {
             return t->id;
         }
@@ -1547,7 +1547,7 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_TOPIC_ID_INVALID;
     }
-    auto *t = topic_get_last();
+    auto t = topic_get_last();
     if (t == nullptr) {
         topic_data.topics = topic_allocate(0, topic_name, output);
         if (topic_data.topics != nullptr) {
@@ -1576,7 +1576,7 @@ static ulog_status topic_remove(const char *topic_name) {
         return ULOG_STATUS_BUSY;
     }
 
-    auto *t      = topic_get_first();
+    auto t = topic_get_first();
     topic_t *t_prev = nullptr;
 
     while (t != nullptr) {
@@ -1829,9 +1829,9 @@ ulog_status ulog_cleanup() {
     topic_data.new_topic_enabled = false;
 #if TOPIC_IS_DYNAMIC
     // Free linked list of dynamically allocated topics
-    auto *t = topic_data.topics;
+    auto t = topic_data.topics;
     while (t != nullptr) {
-        auto *next = t->next;
+        auto next = t->next;
         free((void *)t->name);  // Free the allocated topic name
         free(t);
         t = next;

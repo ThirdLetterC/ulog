@@ -10,7 +10,7 @@ static ulog_status win_lock_fn(bool lock, void *arg) {
     if (arg == nullptr) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    auto *cs = (CRITICAL_SECTION *)arg;
+    auto cs = (CRITICAL_SECTION *)arg;
     if (lock) {
         EnterCriticalSection(cs);
     } else {
