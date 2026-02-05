@@ -618,6 +618,9 @@ ulog_status ulog_prefix_set_fn(ulog_prefix_fn function) {
         return ULOG_STATUS_BUSY;
     }
     if (function == nullptr) {
+        if (lock_unlock() != ULOG_STATUS_OK) {
+            return ULOG_STATUS_BUSY;
+        }
         return ULOG_STATUS_INVALID_ARGUMENT;  // Ignore nullptr function
     }
     prefix_data.function = function;
@@ -801,7 +804,26 @@ static bool level_is_valid(ulog_level level) {
     return (level >= level_min_value && level <= level_data.dsc->max_level);
 }
 
+static bool level_descriptor_is_valid(const ulog_level_descriptor *dsc) {
+    if (dsc == nullptr || dsc->max_level < level_min_value ||
+        dsc->max_level >= ULOG_LEVEL_TOTAL) {
+        return false;
+    }
+
+    for (auto i = (int)level_min_value; i <= (int)dsc->max_level; i++) {
+        if (is_str_empty(dsc->names[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 static void level_print(print_target *tgt, ulog_event *ev) {
+    if (!level_is_valid(ev->level)) {
+        print_to_target(tgt, "? ");
+        return;
+    }
     print_to_target(tgt, "%s ", level_data.dsc->names[ev->level]);
 }
 
@@ -818,8 +840,7 @@ const char *ulog_level_to_string(ulog_level level) {
 }
 
 ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels) {
-    if (new_levels == nullptr || new_levels->names[0] == nullptr ||
-        new_levels->max_level <= level_min_value) {
+    if (!level_descriptor_is_valid(new_levels)) {
         return ULOG_STATUS_INVALID_ARGUMENT;  // Invalid argument
     }
     if (lock_lock() != ULOG_STATUS_OK) {
@@ -1026,6 +1047,10 @@ static void output_file_handler(ulog_event *ev, void *arg) {
 
 ulog_output_id ulog_output_add(ulog_output_handler_fn handler, void *arg,
                                ulog_level level) {
+    if (handler == nullptr || !level_is_valid(level)) {
+        return ULOG_OUTPUT_INVALID;
+    }
+
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_OUTPUT_INVALID;
     }
@@ -1042,6 +1067,9 @@ ulog_output_id ulog_output_add(ulog_output_handler_fn handler, void *arg,
 
 /// @brief Add file handler
 ulog_output_id ulog_output_add_file(FILE *file, ulog_level level) {
+    if (file == nullptr) {
+        return ULOG_OUTPUT_INVALID;
+    }
     return ulog_output_add(output_file_handler, file, level);
 }
 
@@ -1304,6 +1332,9 @@ static void topic_process(const char *topic, ulog_level level,
 // ================
 
 ulog_status ulog_topic_level_set(const char *topic_name, ulog_level level) {
+    if (is_str_empty(topic_name)) {
+        return ULOG_STATUS_INVALID_ARGUMENT;
+    }
     auto topic_id = ulog_topic_get_id(topic_name);
     if (topic_id == ULOG_TOPIC_ID_INVALID) {
         return ULOG_STATUS_NOT_FOUND;  // Topic not found, do nothing
@@ -1312,6 +1343,9 @@ ulog_status ulog_topic_level_set(const char *topic_name, ulog_level level) {
 }
 
 ulog_topic_id ulog_topic_get_id(const char *topic_name) {
+    if (is_str_empty(topic_name)) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
     return topic_str_to_id(topic_name);
 }
 
@@ -1390,6 +1424,9 @@ ulog_status ulog_topic_remove(const char *topic_name) {
 // ================
 
 ulog_topic_id topic_str_to_id(const char *str) {
+    if (is_str_empty(str)) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
     for (auto i = 0; i < topic_static_num; i++) {
         if (is_str_empty(topic_data.topics[i].name)) {
             continue;  // Skip empty slot; continue searching
@@ -1488,6 +1525,9 @@ static topic_t *topic_get_last() {
 }
 
 ulog_topic_id topic_str_to_id(const char *str) {
+    if (is_str_empty(str)) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
     for (auto t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (!is_str_empty(t->name) && strcmp(t->name, str) == 0) {
             return t->id;
@@ -1781,6 +1821,11 @@ void ulog_log(ulog_level level, const char *file, int line, const char *topic,
               const char *message, ...) {
     if (lock_lock() != ULOG_STATUS_OK) {
         return;  // Failed to acquire lock, drop log
+    }
+
+    if (!level_is_valid(level)) {
+        (void)lock_unlock();
+        return;  // Invalid level for current configuration
     }
 
     // Try to get topic ID, outputs and check if logging is allowed for this
