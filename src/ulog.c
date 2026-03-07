@@ -1356,6 +1356,9 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output);
 /// @return ulog_status
 static ulog_status topic_remove(const char *topic_name);
 
+/// @brief Remove all topics without taking the configuration lock
+static void topic_remove_all();
+
 // === Common Topic Functions =================================================
 
 static void topic_print(print_target *tgt, ulog_event *ev) {
@@ -1616,6 +1619,11 @@ static ulog_status topic_remove(const char *topic_name) {
     }
     return ULOG_STATUS_NOT_FOUND;  // Topic not found
 }
+
+static void topic_remove_all() {
+    topic_data.new_topic_enabled = false;
+    memset(topic_data.topics, 0, sizeof(topic_data.topics));
+}
 #endif  // ULOG_HAS_TOPICS && TOPIC_IS_DYNAMIC == false
 
 /* ============================================================================
@@ -1763,6 +1771,20 @@ static ulog_status topic_remove(const char *topic_name) {
         return ULOG_STATUS_BUSY;
     }
     return ULOG_STATUS_NOT_FOUND;  // Topic not found
+}
+
+static void topic_remove_all() {
+    topic_data.new_topic_enabled = false;
+
+    auto t = topic_data.topics;
+    topic_data.topics = nullptr;
+
+    while (t != nullptr) {
+        auto next = t->next;
+        free((void *)t->name);
+        free(t);
+        t = next;
+    }
 }
 
 #endif  // ULOG_HAS_TOPICS && TOPIC_IS_DYNAMIC == true
@@ -1989,26 +2011,8 @@ ulog_status ulog_cleanup() {
     if (lock_lock() != ULOG_STATUS_OK) {  // Lock the configuration
         return ULOG_STATUS_BUSY;
     }
-    // Cleanup Topics
-
-    // TODO: this section can be improved with topic_remove_all() function
 #if ULOG_HAS_TOPICS
-    // Reset new-topic default enable flag
-    topic_data.new_topic_enabled = false;
-#if TOPIC_IS_DYNAMIC
-    // Free linked list of dynamically allocated topics
-    auto t = topic_data.topics;
-    while (t != nullptr) {
-        auto next = t->next;
-        free((void *)t->name);  // Free the allocated topic name
-        free(t);
-        t = next;
-    }
-    topic_data.topics = nullptr;
-#else
-    // Zero out statically allocated topic array
-    memset(topic_data.topics, 0, sizeof(topic_data.topics));
-#endif
+    topic_remove_all();
 #endif  // ULOG_HAS_TOPICS
 
     level_apply_defaults(
