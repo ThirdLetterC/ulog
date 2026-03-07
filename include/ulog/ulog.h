@@ -82,9 +82,11 @@ typedef struct {
 /// @return String representation of the level, or "?" for invalid levels
 const char *ulog_level_to_string(ulog_level level);
 
-/// @brief  Set custom log levels
-/// @param new_levels
-/// @return ulog_status
+/// @brief Set custom log levels
+/// @param new_levels Descriptor to copy into internal bounded storage
+/// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if the
+///         descriptor is invalid, or ULOG_STATUS_BUSY if the lock cannot be
+///         acquired
 [[nodiscard]] ulog_status
 ulog_level_set_new_levels(const ulog_level_descriptor *new_levels);
 
@@ -149,9 +151,9 @@ ulog_level ulog_event_get_level(ulog_event *ev);
 
 /// @brief Get the timestamp from an event (requires ULOG_BUILD_TIME=1)
 /// @param ev Event to get timestamp from
-/// @return Pointer to struct tm with time information, or nullptr if event is
-/// nullptr
-///         or time feature disabled
+/// @return Pointer to an internal time snapshot valid for the lifetime of the
+///         event, or nullptr if event is nullptr, no timestamp is available,
+///         or the time feature is disabled
 struct tm *ulog_event_get_time(ulog_event *ev);
 
 /* ============================================================================
@@ -237,7 +239,7 @@ typedef void (*ulog_prefix_fn)(ulog_event *ev, char *prefix,
 ///        ULOG_BUILD_PREFIX_SIZE>0 or ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param function Handler function to generate prefix, or nullptr to disable
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_BUSY if lock cannot be
-///         acquired, ULOG_STATUS_INVALID_ARGUMENT if function is nullptr
+///         acquired
 [[nodiscard]] ulog_status ulog_prefix_set_fn(ulog_prefix_fn function);
 
 /* ============================================================================
@@ -261,14 +263,15 @@ typedef void (*ulog_output_handler_fn)(ulog_event *ev, void *arg);
 /// @param output Output handle to configure
 /// @param level Minimum log level for this output
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
-///         parameters, ULOG_STATUS_NOT_FOUND if output not found
+///         parameters, ULOG_STATUS_NOT_FOUND if output not found, or
+///         ULOG_STATUS_BUSY if the lock cannot be acquired
 [[nodiscard]] ulog_status ulog_output_level_set(ulog_output_id output,
                                                 ulog_level level);
 
 /// @brief Sets the minimum log level for all outputs
 /// @param level Minimum log level for all outputs
 /// @return ULOG_STATUS_OK on success, ULOG_STATUS_INVALID_ARGUMENT if invalid
-/// level
+///         level, or ULOG_STATUS_BUSY if the lock cannot be acquired
 [[nodiscard]] ulog_status ulog_output_level_set_all(ulog_level level);
 
 /// @brief Adds a custom output handler (requires ULOG_BUILD_EXTRA_OUTPUTS>0
@@ -359,9 +362,11 @@ typedef void (*ulog_output_handler_fn)(ulog_event *ev, void *arg);
 /// @brief Adds a topic  (requires ULOG_BUILD_TOPICS!=0 or
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param topic_name Topic name string (empty or nullptr names are invalid)
-/// @param output Output handle to associate with this topic (ULOG_OUTPUT_ALL)
+/// @param output Output handle to associate with this topic, or
+///        ULOG_OUTPUT_ALL
 /// @param level Minimum log level for this topic
-/// @return Topic ID on success, ULOG_TOPIC_ID_INVALID on failure
+/// @return Topic ID on success, ULOG_TOPIC_ID_INVALID on invalid input, lock
+///         acquisition failure, or if the output does not exist
 [[nodiscard]] ulog_topic_id
 ulog_topic_add(const char *topic_name, ulog_output_id output, ulog_level level);
 
@@ -375,14 +380,17 @@ ulog_topic_add(const char *topic_name, ulog_output_id output, ulog_level level);
 /// ULOG_BUILD_TOPICS!=0 or ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param topic_name Topic name string (empty or nullptr names are invalid)
 /// @param level Minimum log level for this topic
-/// @return ULOG_STATUS_OK on success, ULOG_STATUS_NOT_FOUND if topic not found
+/// @return ULOG_STATUS_OK on success, ULOG_STATUS_NOT_FOUND if topic not
+///         found, ULOG_STATUS_INVALID_ARGUMENT if input is invalid, or
+///         ULOG_STATUS_BUSY if the lock cannot be acquired
 [[nodiscard]] ulog_status ulog_topic_level_set(const char *topic_name,
                                                ulog_level level);
 
 /// @brief Gets the ID of a topic by name  (requires ULOG_BUILD_TOPICS!=0 or
 /// ULOG_BUILD_DYNAMIC_CONFIG=1)
 /// @param topic_name Topic name string (empty or nullptr names are invalid)
-/// @return Topic ID on success, ULOG_TOPIC_ID_INVALID if not found
+/// @return Topic ID on success, ULOG_TOPIC_ID_INVALID if not found or if the
+///         lookup could not acquire the configured lock
 [[nodiscard]] ulog_topic_id ulog_topic_get_id(const char *topic_name);
 
 /* ============================================================================

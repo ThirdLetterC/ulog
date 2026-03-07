@@ -34,5 +34,16 @@ cc-all-features out="ulog_all_features":
         -Iinclude -Iextensions src/ulog.c extensions/ulog_syslog.c \
         examples/ulog_all_features.c -o {{out}}
 
+cc-debug-example out="ulog_example_dbg":
+    {{CC}} -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
+        -fsanitize=address,undefined,leak -Iinclude \
+        src/ulog.c examples/ulog_example.c -o {{out}}
+
+cc-debug-all-features out="ulog_all_features_dbg":
+    {{CC}} -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
+        -fsanitize=address,undefined,leak -DULOG_BUILD_DYNAMIC_CONFIG=1 \
+        -Iinclude -Iextensions src/ulog.c extensions/ulog_syslog.c \
+        examples/ulog_all_features.c -o {{out}}
+
 clean:
     rm -rf zig-out zig-cache ulog_example ulog_all_features

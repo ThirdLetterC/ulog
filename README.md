@@ -20,6 +20,10 @@ A small, portable, and configurable logging library for C23. It favors minimal o
 cc -std=c23 -Iinclude src/ulog.c main.c -o app
 ```
 
+For hardened local testing, the `justfile` also exposes
+`just cc-debug-example` and `just cc-debug-all-features`, which compile with
+`-fsanitize=address,undefined,leak`.
+
 ```c
 #include "ulog/ulog.h"
 
@@ -86,6 +90,9 @@ Set `ULOG_BUILD_DYNAMIC_CONFIG=1` to enable runtime toggles:
 - `ulog_level_config` (short or default level names)
 - `ulog_topic_config` (enable/disable topics at runtime)
 
+Pass `nullptr` to `ulog_prefix_set_fn` to disable a previously installed
+prefix callback.
+
 When dynamic configuration is enabled, the build forces a set of defaults internally:
 `ULOG_BUILD_EXTRA_OUTPUTS=8`, `ULOG_BUILD_PREFIX_SIZE=64`, and `ULOG_BUILD_TOPICS_MODE=ULOG_BUILD_TOPICS_MODE_DYNAMIC`,
 with color, time, source location, and topics enabled.
@@ -107,9 +114,16 @@ void install_output() {
 }
 ```
 
+When `ULOG_BUILD_TIME=1`, `ulog_event_get_time` returns a per-event snapshot,
+so output callbacks can read timestamps without relying on `localtime`'s shared
+static storage.
+
 **Thread Safety**
 
-You can register a lock function with `ulog_lock_set_fn`. For convenience, platform helpers live in `extensions/`. Example with pthreads:
+You can register a lock function with `ulog_lock_set_fn`. When installed, the
+same lock is used for configuration changes, topic/output table updates, and
+log dispatch. For convenience, platform helpers live in `extensions/`. Example
+with pthreads:
 
 ```c
 #include "ulog_lock_pthread.h"

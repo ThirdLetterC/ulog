@@ -194,6 +194,10 @@
 
 // clang-format on
 
+#if ULOG_HAS_TIME
+#include <time.h>
+#endif
+
 /* ============================================================================
    Tools
 ============================================================================ */
@@ -311,7 +315,8 @@ struct ulog_event {
 #endif
 
 #if ULOG_HAS_TIME
-    struct tm *time;
+    struct tm time_snapshot;
+    bool has_time_snapshot;
 #endif
 
 #if ULOG_HAS_SOURCE_LOCATION
@@ -352,10 +357,10 @@ ulog_topic_id ulog_event_get_topic(ulog_event *ev) {
 
 #if ULOG_HAS_TIME
 struct tm *ulog_event_get_time(ulog_event *ev) {
-    if (ev == nullptr) {
+    if (ev == nullptr || !ev->has_time_snapshot) {
         return nullptr;
     }
-    return ev->time;
+    return &ev->time_snapshot;
 }
 #endif  // ULOG_HAS_TIME
 
@@ -411,6 +416,14 @@ static ulog_status lock_unlock() {
         return lock_data.function(false, lock_data.args);
     }
     return ULOG_STATUS_OK;
+}
+
+static ulog_status unlock_with_status(ulog_status status) {
+    auto unlock_status = lock_unlock();
+    if (unlock_status != ULOG_STATUS_OK) {
+        return ULOG_STATUS_BUSY;
+    }
+    return status;
 }
 
 // Public
@@ -617,14 +630,11 @@ ulog_status ulog_prefix_set_fn(ulog_prefix_fn function) {
     if (lock_lock() != ULOG_STATUS_OK) {
         return ULOG_STATUS_BUSY;
     }
-    if (function == nullptr) {
-        if (lock_unlock() != ULOG_STATUS_OK) {
-            return ULOG_STATUS_BUSY;
-        }
-        return ULOG_STATUS_INVALID_ARGUMENT;  // Ignore nullptr function
-    }
     prefix_data.function = function;
-    return lock_unlock();
+    if (function == nullptr) {
+        memset(prefix_data.prefix, 0, sizeof(prefix_data.prefix));
+    }
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 #else  // ULOG_HAS_PREFIX
@@ -704,8 +714,6 @@ ulog_status ulog_time_config(bool enabled) {
 ============================================================================ */
 #if ULOG_HAS_TIME
 
-#include <time.h>
-
 enum {
     time_short_buf_size = 10,  // HH:MM:SS(8) + 1 space + null
     time_full_buf_size  = 21,  // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
@@ -714,19 +722,40 @@ enum {
 // Private
 // ================
 static bool time_print_if_invalid(print_target *tgt, ulog_event *ev) {
-    if (ev->time == nullptr) {
+    if (!ev->has_time_snapshot) {
         print_to_target(tgt, "INVALID_TIME");
         return true;  // Time is invalid, print error message
     }
     return false;  // Time is valid
 }
 
+static bool time_fill_local_snapshot(time_t current_time, struct tm *out) {
+#if defined(_WIN32)
+    return localtime_s(out, &current_time) == 0;
+#elif defined(__unix__) || defined(__APPLE__) || defined(__MVS__)
+    return localtime_r(&current_time, out) != nullptr;
+#else
+    auto tmp = localtime(&current_time);
+    if (tmp == nullptr) {
+        return false;
+    }
+
+    *out = *tmp;
+    return true;
+#endif
+}
+
 /// @brief Fills the event time with the current local time
 /// @param ev - Event to fill. Assumed not nullptr
 static void time_fill_current_time(ulog_event *ev) {
     auto current_time = time(nullptr);  // Get current time
-    // Use localtime because existing tests inspect local clock fields.
-    ev->time = localtime(&current_time);
+    if (current_time == (time_t)-1) {
+        ev->has_time_snapshot = false;
+        return;
+    }
+
+    ev->has_time_snapshot =
+        time_fill_local_snapshot(current_time, &ev->time_snapshot);
 }
 
 static void time_print_short(print_target *tgt, ulog_event *ev,
@@ -736,7 +765,7 @@ static void time_print_short(print_target *tgt, ulog_event *ev,
     }
     char buf[time_short_buf_size] = {0};
     auto format                   = append_space ? "%H:%M:%S " : "%H:%M:%S";
-    strftime(buf, time_short_buf_size, format, ev->time);
+    strftime(buf, time_short_buf_size, format, &ev->time_snapshot);
     print_to_target(tgt, "%s", buf);
 }
 
@@ -748,7 +777,7 @@ static void time_print_full(print_target *tgt, ulog_event *ev,
     }
     char buf[time_full_buf_size] = {0};
     auto format = append_space ? "%Y-%m-%d %H:%M:%S " : "%Y-%m-%d %H:%M:%S";
-    strftime(buf, time_full_buf_size, format, ev->time);
+    strftime(buf, time_full_buf_size, format, &ev->time_snapshot);
     print_to_target(tgt, "%s", buf);
 }
 #else
@@ -774,23 +803,45 @@ static void time_print_full(print_target *tgt, ulog_event *ev,
 // ================
 static constexpr ulog_level level_min_value = ULOG_LEVEL_0;
 
+static const char *const level_names_default_long[ULOG_LEVEL_TOTAL] = {
+    "TRACE", "DEBUG", "INFO ", "WARN ",
+    "ERROR", "FATAL", nullptr, nullptr,
+};
+
+[[maybe_unused]] static const char *const
+    level_names_default_short[ULOG_LEVEL_TOTAL] = {
+    "T", "D", "I", "W", "E", "F", nullptr, nullptr,
+};
+
+enum { level_name_storage_size = 64 };
+
 typedef struct {
-    const ulog_level_descriptor *dsc;
+    ulog_level max_level;
+    const char *names[ULOG_LEVEL_TOTAL];
+    char custom_names[ULOG_LEVEL_TOTAL][level_name_storage_size];
 } level_data_t;
 
-static const ulog_level_descriptor level_names_default = {
-    .max_level = ULOG_LEVEL_FATAL,
+static level_data_t level_data = {
 #if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
-    .names = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
+    .max_level        = ULOG_LEVEL_FATAL,
+    .names            = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
 #else
-    .names = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", nullptr,
-              nullptr},
+    .max_level        = ULOG_LEVEL_FATAL,
+    .names            = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL",
+                         nullptr, nullptr},
 #endif
+    .custom_names     = {{0}},
 };
 
-level_data_t level_data = {
-    .dsc = &level_names_default,
-};
+static void level_apply_defaults(const char *const default_names[],
+                                 ulog_level max_level) {
+    level_data.max_level = max_level;
+
+    for (auto i = 0; i < ULOG_LEVEL_TOTAL; i++) {
+        level_data.names[i] = (i <= (int)max_level) ? default_names[i] : nullptr;
+        memset(level_data.custom_names[i], 0, level_name_storage_size);
+    }
+}
 
 static bool level_is_allowed(ulog_level msg_level, ulog_level log_verbosity) {
     if (msg_level < log_verbosity || msg_level < level_min_value) {
@@ -801,7 +852,7 @@ static bool level_is_allowed(ulog_level msg_level, ulog_level log_verbosity) {
 }
 
 static bool level_is_valid(ulog_level level) {
-    return (level >= level_min_value && level <= level_data.dsc->max_level);
+    return (level >= level_min_value && level <= level_data.max_level);
 }
 
 static bool level_descriptor_is_valid(const ulog_level_descriptor *dsc) {
@@ -811,7 +862,8 @@ static bool level_descriptor_is_valid(const ulog_level_descriptor *dsc) {
     }
 
     for (auto i = (int)level_min_value; i <= (int)dsc->max_level; i++) {
-        if (is_str_empty(dsc->names[i])) {
+        if (is_str_empty(dsc->names[i]) ||
+            strlen(dsc->names[i]) >= level_name_storage_size) {
             return false;
         }
     }
@@ -824,7 +876,7 @@ static void level_print(print_target *tgt, ulog_event *ev) {
         print_to_target(tgt, "? ");
         return;
     }
-    print_to_target(tgt, "%s ", level_data.dsc->names[ev->level]);
+    print_to_target(tgt, "%s ", level_data.names[ev->level]);
 }
 
 // Public
@@ -832,11 +884,11 @@ static void level_print(print_target *tgt, ulog_event *ev) {
 
 /// @brief Returns the string representation of the level
 const char *ulog_level_to_string(ulog_level level) {
-    if (level < level_min_value || level > level_data.dsc->max_level) {
+    if (level < level_min_value || level > level_data.max_level) {
         return "?";  // Return a default string for invalid levels
     }
 
-    return level_data.dsc->names[level];
+    return level_data.names[level];
 }
 
 ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels) {
@@ -847,8 +899,20 @@ ulog_status ulog_level_set_new_levels(const ulog_level_descriptor *new_levels) {
         return ULOG_STATUS_BUSY;  // Failed to acquire lock
     }
 
-    level_data.dsc = new_levels;
-    return lock_unlock();
+    level_data.max_level = new_levels->max_level;
+
+    for (auto i = 0; i < ULOG_LEVEL_TOTAL; i++) {
+        memset(level_data.custom_names[i], 0, level_name_storage_size);
+        level_data.names[i] = nullptr;
+    }
+
+    for (auto i = (int)level_min_value; i <= (int)new_levels->max_level; i++) {
+        memcpy(level_data.custom_names[i], new_levels->names[i],
+               strlen(new_levels->names[i]) + 1);
+        level_data.names[i] = level_data.custom_names[i];
+    }
+
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 ulog_status ulog_level_reset_levels() {
@@ -856,8 +920,14 @@ ulog_status ulog_level_reset_levels() {
         return ULOG_STATUS_BUSY;  // Failed to acquire lock
     }
 
-    level_data.dsc = &level_names_default;
-    return lock_unlock();
+    level_apply_defaults(
+#if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
+        level_names_default_short,
+#else
+        level_names_default_long,
+#endif
+        ULOG_LEVEL_FATAL);
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 /* ============================================================================
@@ -877,11 +947,6 @@ static level_config level_cfg = {
     .short_style = false,
 };
 
-static const ulog_level_descriptor level_names_default_short = {
-    .max_level = ULOG_LEVEL_FATAL,
-    .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
-};
-
 bool level_config_is_short() {
     return level_cfg.short_style;
 }
@@ -894,12 +959,10 @@ ulog_status ulog_level_config(ulog_level_config_style style) {
         return ULOG_STATUS_BUSY;
     }
     level_cfg.short_style = (style == ULOG_LEVEL_CONFIG_STYLE_SHORT);
-    if (level_cfg.short_style) {
-        level_data.dsc = &level_names_default_short;
-    } else {
-        level_data.dsc = &level_names_default;
-    }
-    return lock_unlock();
+    level_apply_defaults(level_cfg.short_style ? level_names_default_short
+                                               : level_names_default_long,
+                         ULOG_LEVEL_FATAL);
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 #else  // ULOG_HAS_DYNAMIC_CONFIG
@@ -956,6 +1019,22 @@ typedef struct {
 static output_data_t output_data = {
     .outputs = {{output_stdout_handler, nullptr, output_stdout_default_level}}};
 
+static bool output_id_is_configurable(ulog_output_id output) {
+    return output >= ULOG_OUTPUT_STDOUT && output < output_total_num;
+}
+
+[[maybe_unused]] static bool output_id_is_routable(ulog_output_id output) {
+    if (output == ULOG_OUTPUT_ALL) {
+        return true;
+    }
+
+    if (!output_id_is_configurable(output)) {
+        return false;
+    }
+
+    return output_data.outputs[output].handler != nullptr;
+}
+
 static void output_handle_single(ulog_event *ev, output *output) {
     if (output->handler == nullptr) {
         return;  // Output has been removed, skip it
@@ -1006,15 +1085,20 @@ ulog_status ulog_output_level_set(ulog_output_id output, ulog_level level) {
     if (!level_is_valid(level)) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    if (output < ULOG_OUTPUT_STDOUT || output >= output_total_num) {
+    if (!output_id_is_configurable(output)) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
+    if (lock_lock() != ULOG_STATUS_OK) {
+        return ULOG_STATUS_BUSY;
+    }
+
     if (output_data.outputs[output].handler == nullptr) {
-        return ULOG_STATUS_NOT_FOUND;  // Output exists but no handler assigned
+        return unlock_with_status(
+            ULOG_STATUS_NOT_FOUND);  // Output exists but no handler assigned
     }
     output_data.outputs[output].level = level;
-    return ULOG_STATUS_OK;
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 ulog_status ulog_output_level_set_all(ulog_level level) {
@@ -1022,10 +1106,14 @@ ulog_status ulog_output_level_set_all(ulog_level level) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
 
+    if (lock_lock() != ULOG_STATUS_OK) {
+        return ULOG_STATUS_BUSY;
+    }
+
     for (auto i = 0; i < output_total_num; i++) {
         output_data.outputs[i].level = level;
     }
-    return ULOG_STATUS_OK;
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 /* ============================================================================
@@ -1335,29 +1423,58 @@ ulog_status ulog_topic_level_set(const char *topic_name, ulog_level level) {
     if (is_str_empty(topic_name)) {
         return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    auto topic_id = ulog_topic_get_id(topic_name);
-    if (topic_id == ULOG_TOPIC_ID_INVALID) {
-        return ULOG_STATUS_NOT_FOUND;  // Topic not found, do nothing
+
+    if (!level_is_valid(level)) {
+        return ULOG_STATUS_INVALID_ARGUMENT;
     }
-    return topic_set_level(topic_id, level);
+
+    if (lock_lock() != ULOG_STATUS_OK) {
+        return ULOG_STATUS_BUSY;
+    }
+
+    auto topic_id = topic_str_to_id(topic_name);
+    if (topic_id == ULOG_TOPIC_ID_INVALID) {
+        return unlock_with_status(
+            ULOG_STATUS_NOT_FOUND);  // Topic not found, do nothing
+    }
+    return unlock_with_status(topic_set_level(topic_id, level));
 }
 
 ulog_topic_id ulog_topic_get_id(const char *topic_name) {
     if (is_str_empty(topic_name)) {
         return ULOG_TOPIC_ID_INVALID;
     }
-    return topic_str_to_id(topic_name);
+
+    if (lock_lock() != ULOG_STATUS_OK) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
+
+    auto topic_id = topic_str_to_id(topic_name);
+    (void)lock_unlock();
+    return topic_id;
 }
 
 ulog_topic_id ulog_topic_add(const char *topic_name, ulog_output_id output,
                              ulog_level level) {
-    if (is_str_empty(topic_name)) {
+    if (is_str_empty(topic_name) || !level_is_valid(level)) {
         return ULOG_TOPIC_ID_INVALID;  // Invalid topic name, do nothing
     }
+
+    if (lock_lock() != ULOG_STATUS_OK) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
+
+    if (!output_id_is_routable(output)) {
+        (void)lock_unlock();
+        return ULOG_TOPIC_ID_INVALID;
+    }
+
     auto id = topic_add(topic_name, output);
     if (id != ULOG_TOPIC_ID_INVALID) {
-        topic_set_level(id, level);
+        (void)topic_set_level(id, level);
     }
+
+    (void)lock_unlock();
     return id;
 }
 
@@ -1449,9 +1566,7 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
     if (is_str_empty(topic_name)) {
         return ULOG_TOPIC_ID_INVALID;
     }
-    if (lock_lock() != ULOG_STATUS_OK) {  // Lock the configuration
-        return ULOG_TOPIC_ID_INVALID;
-    }
+
     for (auto i = 0; i < topic_static_num; i++) {
         // If there is an empty slot
         if (is_str_empty(topic_data.topics[i].name)) {
@@ -1459,16 +1574,13 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
             topic_data.topics[i].name   = topic_name;
             topic_data.topics[i].level  = topic_level_default;
             topic_data.topics[i].output = output;
-            (void)lock_unlock();  // Unlock the configuration
             return i;
         }
         // If the topic already exists
         else if (strcmp(topic_data.topics[i].name, topic_name) == 0) {
-            (void)lock_unlock();  // Unlock the configuration
             return i;
         }
     }
-    (void)lock_unlock();           // Unlock the configuration
     return ULOG_TOPIC_ID_INVALID;  // No space for new topics
 }
 
@@ -1581,35 +1693,25 @@ static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
         return ULOG_TOPIC_ID_INVALID;
     }
 
-    // if exists
     for (auto t = topic_get_first(); t != nullptr; t = topic_get_next(t)) {
         if (!is_str_empty(t->name) && strcmp(t->name, topic_name) == 0) {
             return t->id;
         }
     }
 
-    // If the beginning is empty
-    if (lock_lock() != ULOG_STATUS_OK) {
-        return ULOG_TOPIC_ID_INVALID;
-    }
     auto t = topic_get_last();
     if (t == nullptr) {
         topic_data.topics = topic_allocate(0, topic_name, output);
         if (topic_data.topics != nullptr) {
-            (void)lock_unlock();
             return 0;
         }
-        (void)lock_unlock();
         return ULOG_TOPIC_ID_INVALID;
     }
 
-    // If the beginning is not empty
     t->next = topic_allocate(t->id + 1, topic_name, output);
     if (t->next) {
-        (void)lock_unlock();
         return t->id + 1;
     }
-    (void)lock_unlock();
     return ULOG_TOPIC_ID_INVALID;
 }
 
@@ -1791,7 +1893,7 @@ void log_fill_event(ulog_event *ev, const char *message, ulog_level level,
 #endif
 
 #if ULOG_HAS_TIME
-    ev->time = nullptr;  // Time will be filled later
+    ev->has_time_snapshot = false;  // Time will be filled later
 #endif
 
     time_fill_current_time(ev);  // Fill time with current value
@@ -1893,6 +1995,14 @@ ulog_status ulog_cleanup() {
 #endif
 #endif  // ULOG_HAS_TOPICS
 
+    level_apply_defaults(
+#if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
+        level_names_default_short,
+#else
+        level_names_default_long,
+#endif
+        ULOG_LEVEL_FATAL);
+
     // Cleanup Outputs (keep stdout (index 0) registered but reset its level)
     output_data.outputs[ULOG_OUTPUT_STDOUT].level = output_stdout_default_level;
 #if ULOG_HAS_EXTRA_OUTPUTS
@@ -1909,7 +2019,16 @@ ulog_status ulog_cleanup() {
     memset(prefix_data.prefix, 0, sizeof(prefix_data.prefix));
 #endif
 
-    return lock_unlock();
+#if ULOG_HAS_DYNAMIC_CONFIG
+    color_cfg.enabled   = (bool)ULOG_HAS_COLOR;
+    prefix_cfg.enabled  = (bool)ULOG_HAS_PREFIX;
+    time_cfg.enabled    = (bool)ULOG_HAS_TIME;
+    level_cfg.short_style = false;
+    topic_cfg.enabled   = (bool)ULOG_HAS_TOPICS;
+    src_loc_cfg.enabled = (bool)ULOG_HAS_SOURCE_LOCATION;
+#endif
+
+    return unlock_with_status(ULOG_STATUS_OK);
 }
 
 #endif  // ULOG_BUILD_DISABLED
