@@ -1,4 +1,4 @@
-set shell := ["bash", "-uc"]
+set shell := ["bash", "--noprofile", "--norc", "-uc"]
 
 ZIG := env_var_or_default("ZIG", "zig")
 CLANG_FORMAT := env_var_or_default("CLANG_FORMAT", "clang-format")
@@ -16,10 +16,14 @@ run:
 run-all-features:
     zig build run-all-features
 
+test:
+    if [[ -x /snap/zig/current/zig ]]; then /snap/zig/current/zig build test; else {{ZIG}} build test; fi
+
 format:
     {{CLANG_FORMAT}} -i \
         include/ulog/ulog.h \
         src/ulog.c \
+        testing/tests.c \
         examples/ulog_example.c \
         examples/ulog_all_features.c \
         extensions/ulog_syslog.c

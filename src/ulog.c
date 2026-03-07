@@ -340,7 +340,12 @@ ulog_status ulog_event_get_message(ulog_event *ev, char *buffer,
     auto ev_copy = *ev;
     va_copy(ev_copy.message_format_args, ev->message_format_args);
 
-    log_print_message(&tgt, &ev_copy);
+    if (!is_str_empty(ev_copy.message)) {
+        print_to_target_valist(&tgt, ev_copy.message,
+                               ev_copy.message_format_args);
+    } else {
+        print_to_target(&tgt, "nullptr");
+    }
 
     va_end(ev_copy.message_format_args);
     return ULOG_STATUS_OK;
@@ -804,13 +809,12 @@ static void time_print_full(print_target *tgt, ulog_event *ev,
 static constexpr ulog_level level_min_value = ULOG_LEVEL_0;
 
 static const char *const level_names_default_long[ULOG_LEVEL_TOTAL] = {
-    "TRACE", "DEBUG", "INFO ", "WARN ",
-    "ERROR", "FATAL", nullptr, nullptr,
+    "TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", nullptr, nullptr,
 };
 
-[[maybe_unused]] static const char *const
-    level_names_default_short[ULOG_LEVEL_TOTAL] = {
-    "T", "D", "I", "W", "E", "F", nullptr, nullptr,
+[[maybe_unused]] static const char
+    *const level_names_default_short[ULOG_LEVEL_TOTAL] = {
+        "T", "D", "I", "W", "E", "F", nullptr, nullptr,
 };
 
 enum { level_name_storage_size = 64 };
@@ -823,14 +827,14 @@ typedef struct {
 
 static level_data_t level_data = {
 #if ULOG_HAS_LEVEL_SHORT && !ULOG_HAS_LEVEL_LONG
-    .max_level        = ULOG_LEVEL_FATAL,
-    .names            = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
+    .max_level = ULOG_LEVEL_FATAL,
+    .names     = {"T", "D", "I", "W", "E", "F", nullptr, nullptr},
 #else
-    .max_level        = ULOG_LEVEL_FATAL,
-    .names            = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL",
-                         nullptr, nullptr},
+    .max_level = ULOG_LEVEL_FATAL,
+    .names     = {"TRACE", "DEBUG", "INFO ", "WARN ", "ERROR", "FATAL", nullptr,
+                  nullptr},
 #endif
-    .custom_names     = {{0}},
+    .custom_names = {{0}},
 };
 
 static void level_apply_defaults(const char *const default_names[],
@@ -838,7 +842,8 @@ static void level_apply_defaults(const char *const default_names[],
     level_data.max_level = max_level;
 
     for (auto i = 0; i < ULOG_LEVEL_TOTAL; i++) {
-        level_data.names[i] = (i <= (int)max_level) ? default_names[i] : nullptr;
+        level_data.names[i] =
+            (i <= (int)max_level) ? default_names[i] : nullptr;
         memset(level_data.custom_names[i], 0, level_name_storage_size);
     }
 }
@@ -2020,12 +2025,12 @@ ulog_status ulog_cleanup() {
 #endif
 
 #if ULOG_HAS_DYNAMIC_CONFIG
-    color_cfg.enabled   = (bool)ULOG_HAS_COLOR;
-    prefix_cfg.enabled  = (bool)ULOG_HAS_PREFIX;
-    time_cfg.enabled    = (bool)ULOG_HAS_TIME;
+    color_cfg.enabled     = (bool)ULOG_HAS_COLOR;
+    prefix_cfg.enabled    = (bool)ULOG_HAS_PREFIX;
+    time_cfg.enabled      = (bool)ULOG_HAS_TIME;
     level_cfg.short_style = false;
-    topic_cfg.enabled   = (bool)ULOG_HAS_TOPICS;
-    src_loc_cfg.enabled = (bool)ULOG_HAS_SOURCE_LOCATION;
+    topic_cfg.enabled     = (bool)ULOG_HAS_TOPICS;
+    src_loc_cfg.enabled   = (bool)ULOG_HAS_SOURCE_LOCATION;
 #endif
 
     return unlock_with_status(ULOG_STATUS_OK);

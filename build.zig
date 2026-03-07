@@ -69,6 +69,30 @@ pub fn build(b: *std.Build) void {
 
     const run_all_step = b.step("run-all-features", "Run the all-features example");
     run_all_step.dependOn(&run_all_cmd.step);
+
+    const tests = b.addExecutable(.{
+        .name = "ulog_tests",
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    tests.root_module.addIncludePath(b.path("include"));
+    tests.root_module.addCSourceFile(.{ .file = b.path("src/ulog.c"), .flags = c_flags_dynamic });
+    tests.root_module.addCSourceFile(.{ .file = b.path("testing/tests.c"), .flags = c_flags_dynamic });
+    tests.linkLibC();
+    if (enable_sanitizers) {
+        linkSanitizers(b, tests);
+    }
+
+    const run_tests_cmd = b.addRunArtifact(tests);
+    if (b.args) |args| {
+        run_tests_cmd.addArgs(args);
+    }
+
+    const test_step = b.step("test", "Run the unit tests");
+    test_step.dependOn(&run_tests_cmd.step);
 }
 
 fn createCFlags(
