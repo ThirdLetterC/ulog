@@ -100,9 +100,8 @@ ulog_level_set_new_levels(const ulog_level_descriptor *new_levels);
 
 /// @brief Topic identifier type
 typedef int ulog_topic_id;
-enum {
-    ULOG_TOPIC_ID_INVALID = -1,  ///< Invalid topic ID
-};
+[[maybe_unused]] static constexpr ulog_topic_id ULOG_TOPIC_ID_INVALID =
+    -1;  ///< Invalid topic ID
 
 /* ============================================================================
    Core: Events
@@ -248,11 +247,12 @@ typedef void (*ulog_prefix_fn)(ulog_event *ev, char *prefix,
 
 /// @brief Output handle type for managing log destinations
 typedef int ulog_output_id;
-enum {
-    ULOG_OUTPUT_INVALID = -0x1,       ///< Invalid output handle
-    ULOG_OUTPUT_STDOUT  = 0x0,        ///< Standard output handle
-    ULOG_OUTPUT_ALL     = INT32_MAX,  ///< Log to all outputs (default behavior)
-};
+[[maybe_unused]] static constexpr ulog_output_id ULOG_OUTPUT_INVALID =
+    -1;  ///< Invalid output handle
+[[maybe_unused]] static constexpr ulog_output_id ULOG_OUTPUT_STDOUT =
+    0;  ///< Standard output handle
+[[maybe_unused]] static constexpr ulog_output_id ULOG_OUTPUT_ALL =
+    INT32_MAX;  ///< Log to all outputs (default behavior)
 
 /// @brief Handler function type for custom log output handlers
 /// @param ev Log event to process
@@ -303,7 +303,8 @@ typedef void (*ulog_output_handler_fn)(ulog_event *ev, void *arg);
 
 // clang-format off
 
-// Topics mode constants
+// Topics mode constants. These remain macros because user configuration and
+// the implementation rely on `#if` over build-time values.
 #define ULOG_BUILD_TOPICS_MODE_OFF     0
 #define ULOG_BUILD_TOPICS_MODE_STATIC  1
 #define ULOG_BUILD_TOPICS_MODE_DYNAMIC 2

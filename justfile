@@ -19,6 +19,9 @@ run-all-features:
 test:
     if [[ -x /snap/zig/current/zig ]]; then /snap/zig/current/zig build test; else {{ZIG}} build test; fi
 
+test-sanitized:
+    if [[ -x /snap/zig/current/zig ]]; then /snap/zig/current/zig build --global-cache-dir .zig-global-cache -Dsanitizers=true test; else {{ZIG}} build --global-cache-dir .zig-global-cache -Dsanitizers=true test; fi
+
 format:
     {{CLANG_FORMAT}} -i \
         include/ulog/ulog.h \
@@ -26,7 +29,9 @@ format:
         testing/tests.c \
         examples/ulog_example.c \
         examples/ulog_all_features.c \
-        extensions/ulog_syslog.c
+        extensions/ulog_syslog.c \
+        extensions/ulog_syslog.h \
+        extensions/ulog_microlog6.h
 
 # Direct Zig compiler helpers
 cc-example out="ulog_example":
@@ -48,6 +53,11 @@ cc-debug-all-features out="ulog_all_features_dbg":
         -fsanitize=address,undefined,leak -DULOG_BUILD_DYNAMIC_CONFIG=1 \
         -Iinclude -Iextensions src/ulog.c extensions/ulog_syslog.c \
         examples/ulog_all_features.c -o {{out}}
+
+cc-debug-tests out="ulog_tests_dbg":
+    {{ZIG}} cc -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
+        -fsanitize=address,undefined,leak -DULOG_BUILD_DYNAMIC_CONFIG=1 \
+        -Iinclude src/ulog.c testing/tests.c -o {{out}}
 
 clean:
     rm -rf zig-out zig-cache ulog_example ulog_all_features

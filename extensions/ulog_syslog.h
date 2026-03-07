@@ -17,13 +17,12 @@
 // Topic variants (if topics enabled):
 //
 //   ulog_t(ULOG_SYSLOG_WARN, "Net", "Link down");
-// 
+//
 // *************************************************************************
 
 #pragma once
 
 #include "ulog/ulog.h"
-
 
 /// @brief Mapping constants for syslog severity names.
 /// RFC 5424 severities ascending in numeric value but descending in priority.

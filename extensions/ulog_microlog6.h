@@ -15,7 +15,8 @@
        - ULOG_EXTRA_OUTPUTS     → ULOG_BUILD_EXTRA_OUTPUTS
        - ULOG_HIDE_FILE_STRING  → ULOG_BUILD_SOURCE_LOCATION=0
        - ULOG_SHORT_LEVEL_STRINGS → ULOG_BUILD_LEVEL_SHORT=1
-       - ULOG_TOPICS_NUM (static) → ULOG_BUILD_TOPICS_MODE=1 + ULOG_BUILD_TOPICS_STATIC_NUM
+       - ULOG_TOPICS_NUM (static) → ULOG_BUILD_TOPICS_MODE=1 +
+ULOG_BUILD_TOPICS_STATIC_NUM
        - ULOG_TOPICS_NUM=-1       → ULOG_BUILD_TOPICS_MODE=2
        - ULOG_RUNTIME_MODE        → ULOG_BUILD_DYNAMIC_CONFIG=1
 ============================================================================ */
@@ -23,7 +24,6 @@
 #pragma once
 
 #include "ulog/ulog.h"
-
 
 /* ============================================================================
    Core: Log Level Enum Compatibility
@@ -43,8 +43,8 @@
 
 #define log_trace(...) ulog_trace(__VA_ARGS__)
 #define log_debug(...) ulog_debug(__VA_ARGS__)
-#define log_info(...)  ulog_info(__VA_ARGS__)
-#define log_warn(...)  ulog_warn(__VA_ARGS__)
+#define log_info(...) ulog_info(__VA_ARGS__)
+#define log_warn(...) ulog_warn(__VA_ARGS__)
 #define log_error(...) ulog_error(__VA_ARGS__)
 #define log_fatal(...) ulog_fatal(__VA_ARGS__)
 
@@ -67,16 +67,24 @@ static inline const char *ulog_get_level_string(int level) {
         name = "?";
     }
 
-    // If short style is active (single character), fall back to default long names
+    // If short style is active (single character), fall back to default long
+    // names
     if (name[0] != '\0' && name[1] == '\0') {
         switch (level) {
-            case LOG_TRACE: return "TRACE";
-            case LOG_DEBUG: return "DEBUG";
-            case LOG_INFO:  return "INFO";
-            case LOG_WARN:  return "WARN";
-            case LOG_ERROR: return "ERROR";
-            case LOG_FATAL: return "FATAL";
-            default: break;
+        case LOG_TRACE:
+            return "TRACE";
+        case LOG_DEBUG:
+            return "DEBUG";
+        case LOG_INFO:
+            return "INFO";
+        case LOG_WARN:
+            return "WARN";
+        case LOG_ERROR:
+            return "ERROR";
+        case LOG_FATAL:
+            return "FATAL";
+        default:
+            break;
         }
     }
     return name;
@@ -107,7 +115,7 @@ typedef void (*ulog_LockFn)(bool lock, void *lock_arg);
 
 // Internal static storage for lock wrapper
 static ulog_LockFn _ulog_compat_stored_lock_fn = nullptr;
-static void *_ulog_compat_stored_lock_arg = nullptr;
+static void *_ulog_compat_stored_lock_arg      = nullptr;
 
 // Internal wrapper function to adapt old void return to new ulog_status return
 static inline ulog_status _ulog_compat_lock_wrapper(bool lock, void *arg) {
@@ -119,17 +127,18 @@ static inline ulog_status _ulog_compat_lock_wrapper(bool lock, void *arg) {
 }
 
 /// @brief Sets the lock function (compatible wrapper)
-/// Note: This uses static storage and may not work with multiple different locks
-/// For production use with multiple locks, consider a more sophisticated approach
+/// Note: This uses static storage and may not work with multiple different
+/// locks For production use with multiple locks, consider a more sophisticated
+/// approach
 static inline void ulog_set_lock(ulog_LockFn function, void *lock_arg) {
     if (function == nullptr) {
-        _ulog_compat_stored_lock_fn = nullptr;
+        _ulog_compat_stored_lock_fn  = nullptr;
         _ulog_compat_stored_lock_arg = nullptr;
         (void)ulog_lock_set_fn(nullptr, nullptr);
         return;
     }
 
-    _ulog_compat_stored_lock_fn = function;
+    _ulog_compat_stored_lock_fn  = function;
     _ulog_compat_stored_lock_arg = lock_arg;
     (void)ulog_lock_set_fn(_ulog_compat_lock_wrapper, nullptr);
 }
@@ -174,7 +183,7 @@ static inline void ulog_configure_topics(bool enabled) {
    Feature: Custom Prefix Compatibility
 ============================================================================ */
 
-#if (defined(ULOG_BUILD_PREFIX_SIZE) && ULOG_BUILD_PREFIX_SIZE > 0) || \
+#if (defined(ULOG_BUILD_PREFIX_SIZE) && ULOG_BUILD_PREFIX_SIZE > 0) ||         \
     (defined(ULOG_BUILD_DYNAMIC_CONFIG) && ULOG_BUILD_DYNAMIC_CONFIG == 1)
 
 typedef void (*ulog_PrefixFn)(ulog_Event *ev, char *prefix, size_t prefix_size);
@@ -194,7 +203,7 @@ static inline void ulog_set_prefix_fn(ulog_PrefixFn function) {
    Feature: Extra Outputs Compatibility
 ============================================================================ */
 
-#if (defined(ULOG_BUILD_EXTRA_OUTPUTS) && ULOG_BUILD_EXTRA_OUTPUTS > 0) || \
+#if (defined(ULOG_BUILD_EXTRA_OUTPUTS) && ULOG_BUILD_EXTRA_OUTPUTS > 0) ||     \
     (defined(ULOG_BUILD_DYNAMIC_CONFIG) && ULOG_BUILD_DYNAMIC_CONFIG == 1)
 
 /// @brief Adds a callback (returns int for compatibility)
@@ -217,16 +226,17 @@ static inline int ulog_add_fp(FILE *fp, int level) {
    Feature: Topics Compatibility
 ============================================================================ */
 
-#if (defined(ULOG_BUILD_TOPICS_MODE) && ULOG_BUILD_TOPICS_MODE != 0) || \
+#if (defined(ULOG_BUILD_TOPICS_MODE) && ULOG_BUILD_TOPICS_MODE != 0) ||        \
     (defined(ULOG_BUILD_DYNAMIC_CONFIG) && ULOG_BUILD_DYNAMIC_CONFIG == 1)
 
 // Topic macros using old naming convention
-[[maybe_unused]] static constexpr ulog_topic_id TOPIC_NOT_FOUND = ULOG_TOPIC_ID_INVALID;
+[[maybe_unused]] static constexpr ulog_topic_id TOPIC_NOT_FOUND =
+    ULOG_TOPIC_ID_INVALID;
 
 #define logt_trace(TOPIC_NAME, ...) ulog_topic_trace(TOPIC_NAME, __VA_ARGS__)
 #define logt_debug(TOPIC_NAME, ...) ulog_topic_debug(TOPIC_NAME, __VA_ARGS__)
-#define logt_info(TOPIC_NAME, ...)  ulog_topic_info(TOPIC_NAME, __VA_ARGS__)
-#define logt_warn(TOPIC_NAME, ...)  ulog_topic_warn(TOPIC_NAME, __VA_ARGS__)
+#define logt_info(TOPIC_NAME, ...) ulog_topic_info(TOPIC_NAME, __VA_ARGS__)
+#define logt_warn(TOPIC_NAME, ...) ulog_topic_warn(TOPIC_NAME, __VA_ARGS__)
 #define logt_error(TOPIC_NAME, ...) ulog_topic_error(TOPIC_NAME, __VA_ARGS__)
 #define logt_fatal(TOPIC_NAME, ...) ulog_topic_fatal(TOPIC_NAME, __VA_ARGS__)
 
@@ -307,53 +317,53 @@ static inline int ulog_disable_all_topics() {
 
 // Map old feature flags to new build configuration checks
 #if defined(ULOG_BUILD_COLOR) && ULOG_BUILD_COLOR == 1
-    #define ULOG_FEATURE_COLOR true
+#define ULOG_FEATURE_COLOR true
 #else
-    #define ULOG_FEATURE_COLOR false
+#define ULOG_FEATURE_COLOR false
 #endif
 
 #if defined(ULOG_BUILD_PREFIX_SIZE) && ULOG_BUILD_PREFIX_SIZE > 0
-    #define ULOG_FEATURE_CUSTOM_PREFIX true
+#define ULOG_FEATURE_CUSTOM_PREFIX true
 #else
-    #define ULOG_FEATURE_CUSTOM_PREFIX false
+#define ULOG_FEATURE_CUSTOM_PREFIX false
 #endif
 
 #if defined(ULOG_BUILD_TIME) && ULOG_BUILD_TIME == 1
-    #define ULOG_FEATURE_TIME true
+#define ULOG_FEATURE_TIME true
 #else
-    #define ULOG_FEATURE_TIME false
+#define ULOG_FEATURE_TIME false
 #endif
 
 #if defined(ULOG_BUILD_EXTRA_OUTPUTS) && ULOG_BUILD_EXTRA_OUTPUTS > 0
-    #define ULOG_FEATURE_EXTRA_OUTPUTS true
+#define ULOG_FEATURE_EXTRA_OUTPUTS true
 #else
-    #define ULOG_FEATURE_EXTRA_OUTPUTS false
+#define ULOG_FEATURE_EXTRA_OUTPUTS false
 #endif
 
 #if defined(ULOG_BUILD_SOURCE_LOCATION) && ULOG_BUILD_SOURCE_LOCATION == 1
-    #define ULOG_FEATURE_FILE_STRING true
+#define ULOG_FEATURE_FILE_STRING true
 #elif defined(ULOG_BUILD_SOURCE_LOCATION) && ULOG_BUILD_SOURCE_LOCATION == 0
-    #define ULOG_FEATURE_FILE_STRING false
+#define ULOG_FEATURE_FILE_STRING false
 #else
-    #define ULOG_FEATURE_FILE_STRING true  // Default is enabled in v7.x
+#define ULOG_FEATURE_FILE_STRING true  // Default is enabled in v7.x
 #endif
 
 #if defined(ULOG_BUILD_LEVEL_SHORT) && ULOG_BUILD_LEVEL_SHORT == 1
-    #define ULOG_FEATURE_SHORT_LEVELS true
+#define ULOG_FEATURE_SHORT_LEVELS true
 #else
-    #define ULOG_FEATURE_SHORT_LEVELS false
+#define ULOG_FEATURE_SHORT_LEVELS false
 #endif
 
 #if defined(ULOG_BUILD_TOPICS_MODE) && ULOG_BUILD_TOPICS_MODE != 0
-    #define ULOG_FEATURE_TOPICS true
+#define ULOG_FEATURE_TOPICS true
 #else
-    #define ULOG_FEATURE_TOPICS false
+#define ULOG_FEATURE_TOPICS false
 #endif
 
 #if defined(ULOG_BUILD_DYNAMIC_CONFIG) && ULOG_BUILD_DYNAMIC_CONFIG == 1
-    #define ULOG_FEATURE_RUNTIME_MODE true
+#define ULOG_FEATURE_RUNTIME_MODE true
 #else
-    #define ULOG_FEATURE_RUNTIME_MODE false
+#define ULOG_FEATURE_RUNTIME_MODE false
 #endif
 
 // Note: ULOG_FEATURE_EMOJI_LEVELS is not supported in v7.x

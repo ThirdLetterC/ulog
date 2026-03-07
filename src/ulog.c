@@ -719,10 +719,10 @@ ulog_status ulog_time_config(bool enabled) {
 ============================================================================ */
 #if ULOG_HAS_TIME
 
-enum {
-    time_short_buf_size = 10,  // HH:MM:SS(8) + 1 space + null
-    time_full_buf_size  = 21,  // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
-};
+static constexpr size_t time_short_buf_size =
+    10U;  // HH:MM:SS(8) + 1 space + null
+static constexpr size_t time_full_buf_size =
+    21U;  // YYYY-MM-DD HH:MM:SS(19) + 1 space + null
 
 // Private
 // ================
@@ -817,7 +817,7 @@ static const char *const level_names_default_long[ULOG_LEVEL_TOTAL] = {
         "T", "D", "I", "W", "E", "F", nullptr, nullptr,
 };
 
-enum { level_name_storage_size = 64 };
+static constexpr size_t level_name_storage_size = 64U;
 
 typedef struct {
     ulog_level max_level;
@@ -999,9 +999,10 @@ ulog_status ulog_level_config(ulog_level_config_style style) {
 //  Private
 // ================
 #if ULOG_HAS_EXTRA_OUTPUTS
-enum { output_total_num = (1 + ULOG_BUILD_EXTRA_OUTPUTS) };  // stdout + extra
+static constexpr int output_total_num =
+    (1 + ULOG_BUILD_EXTRA_OUTPUTS);  // stdout + extra
 #else
-enum { output_total_num = 1 };  // Only stdout
+static constexpr int output_total_num = 1;  // Only stdout
 #endif  // ULOG_HAS_EXTRA_OUTPUTS
 
 static constexpr ulog_level output_stdout_default_level = ULOG_LEVEL_TRACE;
@@ -1076,8 +1077,7 @@ static void output_handle_all(ulog_event *ev) {
     }
 }
 
-static void output_stdout_handler(ulog_event *ev, void *arg) {
-    (void)(arg);  // Unused
+static void output_stdout_handler(ulog_event *ev, [[maybe_unused]] void *arg) {
     auto tgt =
         (print_target){.type = PRINT_TARGET_STREAM, .dsc.stream = stdout};
     log_print_event(&tgt, ev, false, true, true);
@@ -1297,7 +1297,8 @@ ulog_status ulog_topic_config(bool enabled) {
 /* Dynamic if mode equals DYNAMIC */
 #define TOPIC_IS_DYNAMIC                                                       \
     (ULOG_BUILD_TOPICS_MODE == ULOG_BUILD_TOPICS_MODE_DYNAMIC)
-enum { topic_static_num = ULOG_BUILD_TOPICS_STATIC_NUM };
+[[maybe_unused]] static constexpr int topic_static_num =
+    ULOG_BUILD_TOPICS_STATIC_NUM;
 static constexpr ulog_level topic_level_default = ULOG_LEVEL_TRACE;
 
 typedef struct topic_t {
@@ -1455,7 +1456,9 @@ ulog_topic_id ulog_topic_get_id(const char *topic_name) {
     }
 
     auto topic_id = topic_str_to_id(topic_name);
-    (void)lock_unlock();
+    if (lock_unlock() != ULOG_STATUS_OK) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
     return topic_id;
 }
 
@@ -1479,7 +1482,9 @@ ulog_topic_id ulog_topic_add(const char *topic_name, ulog_output_id output,
         (void)topic_set_level(id, level);
     }
 
-    (void)lock_unlock();
+    if (lock_unlock() != ULOG_STATUS_OK) {
+        return ULOG_TOPIC_ID_INVALID;
+    }
     return id;
 }
 
@@ -1665,32 +1670,38 @@ static topic_t *topic_get(int topic) {
     return nullptr;
 }
 
-static topic_t *topic_allocate(int id, const char *topic_name,
-                               ulog_output_id output) {
+[[nodiscard]] static topic_t *topic_allocate(int id, const char *topic_name,
+                                             ulog_output_id output) {
     if (is_str_empty(topic_name)) {
         return nullptr;  // Invalid topic name, do not allocate
     }
     if (id < 0) {
         return nullptr;  // Invalid ID, do not allocate
     }
-    auto t = (topic_t *)calloc(1, sizeof(topic_t));
-    if (t != nullptr) {
-        // Allocate memory for the topic name and copy it
-        auto name_len  = strlen(topic_name) + 1;
-        auto name_copy = (char *)calloc(name_len, sizeof(char));
-        if (name_copy == nullptr) {
-            free(t);
-            return nullptr;  // Failed to allocate memory for name
-        }
-        memcpy(name_copy, topic_name, name_len);
 
-        t->id     = id;
-        t->name   = name_copy;
-        t->level  = topic_level_default;
-        t->output = output;
-        t->next   = nullptr;
+    auto t = (topic_t *)calloc(1, sizeof(topic_t));
+    if (t == nullptr) {
+        return nullptr;
     }
+
+    auto name_len  = strlen(topic_name) + 1U;
+    auto name_copy = (char *)calloc(name_len, sizeof(char));
+    if (name_copy == nullptr) {
+        goto cleanup_topic;
+    }
+
+    memcpy(name_copy, topic_name, name_len);
+
+    t->id     = id;
+    t->name   = name_copy;
+    t->level  = topic_level_default;
+    t->output = output;
+    t->next   = nullptr;
     return t;
+
+cleanup_topic:
+    free(t);
+    return nullptr;
 }
 
 static ulog_topic_id topic_add(const char *topic_name, ulog_output_id output) {
