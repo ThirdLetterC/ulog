@@ -17,10 +17,10 @@ run-all-features:
     zig build run-all-features
 
 test:
-    if [[ -x /snap/zig/current/zig ]]; then /snap/zig/current/zig build test; else {{ZIG}} build test; fi
+    {{ZIG}} build test
 
 test-sanitized:
-    if [[ -x /snap/zig/current/zig ]]; then /snap/zig/current/zig build --global-cache-dir .zig-global-cache -Dsanitizers=true test; else {{ZIG}} build --global-cache-dir .zig-global-cache -Dsanitizers=true test; fi
+    {{ZIG}} build --global-cache-dir .zig-global-cache -Dsanitizers=true test
 
 format:
     {{CLANG_FORMAT}} -i \
