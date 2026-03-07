@@ -1,6 +1,6 @@
 set shell := ["bash", "-uc"]
 
-CC := env_var_or_default("CC", "cc")
+ZIG := env_var_or_default("ZIG", "zig")
 CLANG_FORMAT := env_var_or_default("CLANG_FORMAT", "clang-format")
 
 default:
@@ -24,23 +24,23 @@ format:
         examples/ulog_all_features.c \
         extensions/ulog_syslog.c
 
-# Direct C compiler helpers
+# Direct Zig compiler helpers
 cc-example out="ulog_example":
-    {{CC}} -std=c23 -Wall -Wextra -Wpedantic -Werror -Iinclude \
+    {{ZIG}} cc -std=c23 -Wall -Wextra -Wpedantic -Werror -Iinclude \
         src/ulog.c examples/ulog_example.c -o {{out}}
 
 cc-all-features out="ulog_all_features":
-    {{CC}} -std=c23 -Wall -Wextra -Wpedantic -Werror -DULOG_BUILD_DYNAMIC_CONFIG=1 \
+    {{ZIG}} cc -std=c23 -Wall -Wextra -Wpedantic -Werror -DULOG_BUILD_DYNAMIC_CONFIG=1 \
         -Iinclude -Iextensions src/ulog.c extensions/ulog_syslog.c \
         examples/ulog_all_features.c -o {{out}}
 
 cc-debug-example out="ulog_example_dbg":
-    {{CC}} -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
+    {{ZIG}} cc -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
         -fsanitize=address,undefined,leak -Iinclude \
         src/ulog.c examples/ulog_example.c -o {{out}}
 
 cc-debug-all-features out="ulog_all_features_dbg":
-    {{CC}} -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
+    {{ZIG}} cc -std=c23 -Wall -Wextra -Wpedantic -Werror -O0 -g \
         -fsanitize=address,undefined,leak -DULOG_BUILD_DYNAMIC_CONFIG=1 \
         -Iinclude -Iextensions src/ulog.c extensions/ulog_syslog.c \
         examples/ulog_all_features.c -o {{out}}

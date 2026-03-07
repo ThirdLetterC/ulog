@@ -24,6 +24,9 @@ For hardened local testing, the `justfile` also exposes
 `just cc-debug-example` and `just cc-debug-all-features`, which compile with
 `-fsanitize=address,undefined,leak`.
 
+The Zig build now supports the same sanitizer set through
+`zig build -Dsanitizers=true`.
+
 ```c
 #include "ulog/ulog.h"
 

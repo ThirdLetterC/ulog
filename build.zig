@@ -3,22 +3,14 @@ const std = @import("std");
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
+    const enable_sanitizers = b.option(
+        bool,
+        "sanitizers",
+        "Enable AddressSanitizer, UndefinedBehaviorSanitizer, and LeakSanitizer",
+    ) orelse false;
 
-    const c_flags = &[_][]const u8{
-        "-std=c23",
-        "-Wall",
-        "-Wextra",
-        "-Wpedantic",
-        "-Werror",
-    };
-    const c_flags_dynamic = &[_][]const u8{
-        "-std=c23",
-        "-Wall",
-        "-Wextra",
-        "-Wpedantic",
-        "-Werror",
-        "-DULOG_BUILD_DYNAMIC_CONFIG=1",
-    };
+    const c_flags = createCFlags(b, false, enable_sanitizers);
+    const c_flags_dynamic = createCFlags(b, true, enable_sanitizers);
 
     const exe = b.addExecutable(.{
         .name = "ulog_example",
@@ -32,6 +24,9 @@ pub fn build(b: *std.Build) void {
     exe.root_module.addCSourceFile(.{ .file = b.path("src/ulog.c"), .flags = c_flags });
     exe.root_module.addCSourceFile(.{ .file = b.path("examples/ulog_example.c"), .flags = c_flags });
     exe.linkLibC();
+    if (enable_sanitizers) {
+        linkSanitizers(b, exe);
+    }
 
     b.installArtifact(exe);
 
@@ -59,6 +54,9 @@ pub fn build(b: *std.Build) void {
     all_features.root_module.addCSourceFile(.{ .file = b.path("extensions/ulog_syslog.c"), .flags = c_flags_dynamic });
     all_features.root_module.addCSourceFile(.{ .file = b.path("examples/ulog_all_features.c"), .flags = c_flags_dynamic });
     all_features.linkLibC();
+    if (enable_sanitizers) {
+        linkSanitizers(b, all_features);
+    }
 
     b.installArtifact(all_features);
 
@@ -71,4 +69,84 @@ pub fn build(b: *std.Build) void {
 
     const run_all_step = b.step("run-all-features", "Run the all-features example");
     run_all_step.dependOn(&run_all_cmd.step);
+}
+
+fn createCFlags(
+    b: *std.Build,
+    dynamic_config: bool,
+    enable_sanitizers: bool,
+) []const []const u8 {
+    var flags = std.array_list.Managed([]const u8).init(b.allocator);
+    flags.appendSlice(&.{
+        "-std=c23",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Werror",
+    }) catch @panic("OOM");
+
+    if (dynamic_config) {
+        flags.append("-DULOG_BUILD_DYNAMIC_CONFIG=1") catch @panic("OOM");
+    }
+
+    if (enable_sanitizers) {
+        flags.appendSlice(&.{
+            "-O0",
+            "-g",
+            "-fno-omit-frame-pointer",
+            "-fsanitize=address,undefined,leak",
+        }) catch @panic("OOM");
+    }
+
+    return flags.toOwnedSlice() catch @panic("OOM");
+}
+
+fn linkSanitizers(b: *std.Build, artifact: *std.Build.Step.Compile) void {
+    addSanitizerLibrary(b, artifact, "asan");
+    addSanitizerLibrary(b, artifact, "ubsan");
+    addSanitizerLibrary(b, artifact, "lsan");
+}
+
+fn addSanitizerLibrary(
+    b: *std.Build,
+    artifact: *std.Build.Step.Compile,
+    lib_name: []const u8,
+) void {
+    const runtime_dir = findCompilerRuntimeDir(b, lib_name) orelse
+        std.debug.panic("unable to locate sanitizer runtime for {s}", .{lib_name});
+
+    artifact.root_module.addLibraryPath(.{ .cwd_relative = runtime_dir });
+    artifact.root_module.addRPath(.{ .cwd_relative = runtime_dir });
+    artifact.root_module.linkSystemLibrary(lib_name, .{ .use_pkg_config = .no });
+}
+
+fn findCompilerRuntimeDir(b: *std.Build, lib_name: []const u8) ?[]const u8 {
+    const cc = b.graph.env_map.get("CC") orelse "cc";
+    const candidates = [_][]const u8{
+        b.fmt("lib{s}.so", .{lib_name}),
+        b.fmt("lib{s}.a", .{lib_name}),
+    };
+
+    var code: u8 = 0;
+    for (candidates) |file_name| {
+        const output = b.runAllowFail(
+            &.{ cc, b.fmt("-print-file-name={s}", .{file_name}) },
+            &code,
+            .Ignore,
+        ) catch continue;
+        if (code != 0) {
+            continue;
+        }
+
+        const resolved = std.mem.trim(u8, output, " \r\n\t");
+        if (resolved.len == 0 or std.mem.eql(u8, resolved, file_name)) {
+            continue;
+        }
+
+        if (std.fs.path.dirname(resolved)) |dir_name| {
+            return dir_name;
+        }
+    }
+
+    return null;
 }
