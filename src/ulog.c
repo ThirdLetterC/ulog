@@ -1776,7 +1776,7 @@ static ulog_status topic_remove(const char *topic_name) {
 static void topic_remove_all() {
     topic_data.new_topic_enabled = false;
 
-    auto t = topic_data.topics;
+    auto t            = topic_data.topics;
     topic_data.topics = nullptr;
 
     while (t != nullptr) {
